@@ -21,6 +21,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'is_admin',
     ];
 
     /**
@@ -43,6 +44,31 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_admin' => 'boolean',
         ];
+    }
+
+    /**
+     * このユーザーの勤怠記録
+     */
+    public function attendances()
+    {
+        return $this->hasMany(Attendance::class);
+    }
+
+    /**
+     * このユーザーの打刻修正申請
+     */
+    public function stampCorrectionRequests()
+    {
+        return $this->hasMany(StampCorrectionRequest::class);
+    }
+
+    /**
+     * このユーザーが承認した打刻修正申請
+     */
+    public function approvedRequests()
+    {
+        return $this->hasMany(StampCorrectionRequest::class, 'approved_by');
     }
 }
