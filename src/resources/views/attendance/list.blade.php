@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            勤怠一覧
+            勤怠一覧 - {{ Carbon\Carbon::parse($currentMonth.'-01')->format('Y年m月') }}
         </h2>
     </x-slot>
 
@@ -9,11 +9,26 @@
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg">
                 <div class="p-6">
-                    <!-- ナビゲーション -->
-                    <div class="mb-6">
+                    <!-- ナビゲーションとフィルター -->
+                    <div class="flex justify-between items-center mb-6">
                         <a href="{{ route('attendance.index') }}" class="btn btn-primary">
                             勤怠登録に戻る
                         </a>
+                        
+                        <!-- 月フィルター -->
+                        <div class="flex items-center space-x-4">
+                            <a href="{{ route('attendance.list', ['month' => $prevMonth]) }}" 
+                               class="btn btn-outline">
+                                ← 前月
+                            </a>
+                            <span class="text-lg font-semibold">
+                                {{ Carbon\Carbon::parse($currentMonth.'-01')->format('Y年m月') }}
+                            </span>
+                            <a href="{{ route('attendance.list', ['month' => $nextMonth]) }}" 
+                               class="btn btn-outline">
+                                翌月 →
+                            </a>
+                        </div>
                     </div>
 
                     <!-- 勤怠一覧テーブル -->

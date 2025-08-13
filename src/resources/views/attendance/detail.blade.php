@@ -90,12 +90,18 @@
                         </div>
                         <div class="card-body">
                             <p class="text-gray-600 mb-4">
-                                打刻時刻に誤りがある場合は、修正申請を行うことができます。
+                                勤怠情報を編集または修正申請を行うことができます。
                             </p>
-                            <a href="{{ route('stamp_correction_request.create', $attendance) }}" 
-                               class="btn btn-primary">
-                                修正申請を作成
-                            </a>
+                            <div class="flex space-x-4">
+                                <a href="{{ route('attendance.edit', $attendance) }}" 
+                                   class="btn btn-primary">
+                                    勤怠情報を編集
+                                </a>
+                                <a href="{{ route('stamp_correction_request.create', $attendance) }}" 
+                                   class="btn btn-secondary">
+                                    修正申請を作成
+                                </a>
+                            </div>
                         </div>
                     </div>
 

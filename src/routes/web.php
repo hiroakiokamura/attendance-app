@@ -28,6 +28,10 @@ Route::middleware(['auth'])->group(function () {
     // PG05: 勤怠詳細画面
     Route::get('/attendance/detail/{id}', [AttendanceController::class, 'detail'])->name('attendance.detail');
     
+    // 勤怠編集
+    Route::get('/attendance/edit/{id}', [AttendanceController::class, 'edit'])->name('attendance.edit');
+    Route::put('/attendance/{id}', [AttendanceController::class, 'update'])->name('attendance.update');
+    
     // PG06: 申請一覧画面（一般ユーザー）
     Route::get('/stamp_correction_request/list', [StampCorrectionRequestController::class, 'list'])->name('stamp_correction_request.list');
     Route::get('/stamp_correction_request/create/{attendance}', [StampCorrectionRequestController::class, 'create'])->name('stamp_correction_request.create');
@@ -63,6 +67,10 @@ Route::prefix('admin')->group(function () {
         // PG13: 修正申請承認画面（管理者）
         Route::get('/stamp_correction_request/approve/{attendance_correct_request}', [StampCorrectionRequestController::class, 'approve'])->name('admin.stamp_correction_request.approve');
         Route::post('/stamp_correction_request/approve/{attendance_correct_request}', [StampCorrectionRequestController::class, 'processApproval'])->name('admin.stamp_correction_request.process');
+        
+        // 勤怠編集（管理者）
+        Route::get('/attendance/edit/{id}', [AdminController::class, 'editAttendance'])->name('admin.attendance.edit');
+        Route::put('/attendance/{id}', [AdminController::class, 'updateAttendance'])->name('admin.attendance.update');
         
         // 管理者ログアウト
         Route::post('/logout', [AdminController::class, 'logout'])->name('admin.logout');
