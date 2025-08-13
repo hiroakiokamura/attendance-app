@@ -4,27 +4,17 @@ use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\StampCorrectionRequestController;
 use App\Http\Controllers\Admin\AdminController;
 use Illuminate\Support\Facades\Route;
-use Laravel\Fortify\Http\Controllers\AuthenticatedSessionController;
-use Laravel\Fortify\Http\Controllers\RegisteredUserController;
+
 
 // ホーム画面をログイン画面にリダイレクト
 Route::get('/', function () {
     return redirect()->route('login');
 });
 
-// 一般ユーザー用ルート
-Route::middleware('guest')->group(function () {
-    // PG01: 会員登録画面
-    Route::get('/register', [RegisteredUserController::class, 'create'])->name('register');
-    Route::post('/register', [RegisteredUserController::class, 'store']);
-    
-    // PG02: ログイン画面（一般ユーザー）
-    Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
-    Route::post('/login', [AuthenticatedSessionController::class, 'store']);
-});
+// Fortifyが自動的に認証ルートを処理します
 
 // 認証済み一般ユーザー用ルート
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth'])->group(function () {
     // PG03: 勤怠登録画面
     Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
     Route::post('/attendance/clock-in', [AttendanceController::class, 'clockIn'])->name('attendance.clock-in');
@@ -43,8 +33,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/stamp_correction_request/create/{attendance}', [StampCorrectionRequestController::class, 'create'])->name('stamp_correction_request.create');
     Route::post('/stamp_correction_request', [StampCorrectionRequestController::class, 'store'])->name('stamp_correction_request.store');
     
-    // ログアウト
-    Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
+    // ログアウトはFortifyが処理
 });
 
 // 管理者用ルート
