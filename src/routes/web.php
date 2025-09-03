@@ -15,6 +15,11 @@ Route::get('/', function () {
 
 // 認証済み一般ユーザー用ルート
 Route::middleware(['auth'])->group(function () {
+    // ダッシュボード（勤怠登録画面へリダイレクト）
+    Route::get('/dashboard', function () {
+        return redirect()->route('attendance.index');
+    })->name('dashboard');
+    
     // PG03: 勤怠登録画面
     Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
     Route::post('/attendance/clock-in', [AttendanceController::class, 'clockIn'])->name('attendance.clock-in');

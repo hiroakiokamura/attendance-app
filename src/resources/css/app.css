@@ -3,6 +3,7 @@
 @tailwind utilities;
 
 @layer components {
+
     /* ボタンスタイル */
     .btn {
         @apply px-4 py-2 rounded-md font-medium transition-colors duration-200 inline-block text-center border;
