@@ -63,25 +63,20 @@ class AdminController extends Controller
      */
     public function attendanceList(Request $request)
     {
-        $query = Attendance::with('user');
+        // 現在の日付を取得（リクエストから日付が指定されている場合はその日付を使用）
+        $currentDate = $request->date ? Carbon::parse($request->date) : now();
+        
+        // 前日・翌日の日付を計算
+        $prevDate = $currentDate->copy()->subDay()->format('Y-m-d');
+        $nextDate = $currentDate->copy()->addDay()->format('Y-m-d');
 
-        // 日付フィルター
-        if ($request->date) {
-            $query->where('work_date', $request->date);
-        }
+        // その日の勤怠記録を取得
+        $attendances = Attendance::with('user')
+            ->whereDate('work_date', $currentDate->format('Y-m-d'))
+            ->orderBy('work_date', 'desc')
+            ->get();
 
-        // ユーザーフィルター
-        if ($request->user_id) {
-            $query->where('user_id', $request->user_id);
-        }
-
-        $attendances = $query->orderBy('work_date', 'desc')
-            ->orderBy('clock_in', 'desc')
-            ->paginate(20);
-
-        $users = User::where('is_admin', false)->get();
-
-        return view('admin.attendance.list', compact('attendances', 'users'));
+        return view('admin.attendance.list', compact('attendances', 'currentDate', 'prevDate', 'nextDate'));
     }
 
     /**
