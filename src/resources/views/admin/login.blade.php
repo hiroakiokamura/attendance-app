@@ -14,10 +14,17 @@
             <div class="flex items-center">
                 <!-- COACHTECHロゴ -->
                 <div class="flex items-center">
-                    <div class="bg-white text-black px-2 py-1 rounded mr-2 font-bold text-sm">
-                        CT
+                    <img src="{{ asset('images/logos/coachtech-logo.svg') }}" 
+                         alt="COACHTECH" 
+                         class="h-8 w-auto"
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <!-- フォールバック用ロゴ（SVGが読み込めない場合） -->
+                    <div class="items-center" style="display: none;">
+                        <div class="bg-white text-black px-2 py-1 rounded mr-2 font-bold text-sm">
+                            CT
+                        </div>
+                        <span class="text-xl font-bold">COACHTECH</span>
                     </div>
-                    <span class="text-xl font-bold">COACHTECH</span>
                 </div>
             </div>
         </div>
