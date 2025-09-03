@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="200" height="32" viewBox="0 0 200 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- テスト用COACHTECHロゴ -->
+  <rect width="30" height="30" x="1" y="1" rx="4" fill="white" stroke="white" stroke-width="2"/>
+  <text x="16" y="20" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="black">CT</text>
+  <text x="45" y="20" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="white">COACHTECH</text>
+</svg>

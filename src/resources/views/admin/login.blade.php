@@ -17,9 +17,10 @@
                     <img src="{{ asset('images/logos/coachtech-logo.svg') }}" 
                          alt="COACHTECH" 
                          class="h-8 w-auto"
-                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                         id="svg-logo"
+                         onerror="document.getElementById('svg-logo').style.display='none'; document.getElementById('fallback-logo').style.display='flex';">
                     <!-- フォールバック用ロゴ（SVGが読み込めない場合） -->
-                    <div class="items-center" style="display: none;">
+                    <div class="flex items-center" id="fallback-logo" style="display: none;">
                         <div class="bg-white text-black px-2 py-1 rounded mr-2 font-bold text-sm">
                             CT
                         </div>
@@ -91,5 +92,22 @@
             </div>
         </div>
     </div>
+
+    <!-- ロゴフォールバック用スクリプト -->
+    <script>
+        // ページ読み込み時にSVGの存在を確認
+        document.addEventListener('DOMContentLoaded', function() {
+            const svgLogo = document.getElementById('svg-logo');
+            const fallbackLogo = document.getElementById('fallback-logo');
+            
+            // SVGが読み込まれない場合のタイムアウト
+            setTimeout(function() {
+                if (svgLogo.naturalWidth === 0) {
+                    svgLogo.style.display = 'none';
+                    fallbackLogo.style.display = 'flex';
+                }
+            }, 1000);
+        });
+    </script>
 </body>
 </html>
