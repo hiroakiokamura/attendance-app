@@ -17,15 +17,7 @@
                     <img src="{{ asset('images/logos/coachtech-logo.svg') }}" 
                          alt="COACHTECH" 
                          class="h-8 w-auto"
-                         id="svg-logo"
-                         onerror="document.getElementById('svg-logo').style.display='none'; document.getElementById('fallback-logo').style.display='flex';">
-                    <!-- フォールバック用ロゴ（SVGが読み込めない場合） -->
-                    <div class="flex items-center" id="fallback-logo" style="display: none;">
-                        <div class="bg-white text-black px-2 py-1 rounded mr-2 font-bold text-sm">
-                            CT
-                        </div>
-                        <span class="text-xl font-bold">COACHTECH</span>
-                    </div>
+                         id="svg-logo">
                 </div>
             </div>
         </div>
