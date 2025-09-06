@@ -1,174 +1,208 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            勤怠登録
-        </h2>
-    </x-slot>
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>勤怠登録 - COACHTECH</title>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- ヘッダー -->
+    <header class="bg-black text-white py-4">
+        <div class="container mx-auto px-4">
+            <div class="flex items-center justify-between">
+                <!-- COACHTECHロゴ -->
+                <div class="flex items-center">
+                    <img src="{{ asset('images/logos/coachtech-logo.svg') }}" 
+                         alt="COACHTECH" 
+                         class="h-8 w-auto">
+                </div>
+                
+                <!-- ナビゲーション -->
+                <nav class="flex items-center space-x-6">
+                    <a href="{{ route('attendance.index') }}" class="text-white hover:text-gray-300 transition-colors">
+                        動会
+                    </a>
+                    <a href="{{ route('attendance.list') }}" class="text-white hover:text-gray-300 transition-colors">
+                        動名一覧
+                    </a>
+                    <a href="{{ route('stamp_correction_request.list') }}" class="text-white hover:text-gray-300 transition-colors">
+                        申請
+                    </a>
+                    <form method="POST" action="{{ route('logout') }}" class="inline">
+                        @csrf
+                        <button type="submit" class="text-white hover:text-gray-300 transition-colors">
+                            ログアウト
+                        </button>
+                    </form>
+                </nav>
+            </div>
+        </div>
+    </header>
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+    <!-- メインコンテンツ -->
+    <div class="bg-gray-100 min-h-screen" style="min-height: calc(100vh - 80px);">
+        <div class="container mx-auto px-4 py-8">
             <!-- アラートメッセージ -->
             @if (session('success'))
-                <div class="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
+                <div class="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded max-w-md mx-auto">
                     {{ session('success') }}
                 </div>
             @endif
 
             @if (session('error'))
-                <div class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+                <div class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded max-w-md mx-auto">
                     {{ session('error') }}
                 </div>
             @endif
 
-            <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg">
-                <div class="p-6">
-                    <!-- 現在の日時表示 -->
-                    <div class="text-center mb-8">
-                        <div class="text-3xl font-bold text-gray-800 mb-2" id="currentTime">
-                            {{ now()->format('H:i:s') }}
-                        </div>
-                        <div class="text-lg text-gray-600">
-                            {{ now()->format('Y年m月d日 (D)') }}
-                        </div>
+            <!-- メインコンテンツエリア -->
+            <div class="max-w-md mx-auto text-center">
+                <!-- ユーザー挨拶 -->
+                <div class="mb-6">
+                    <p class="text-lg text-gray-700">
+                        {{ Auth::user()->name }}さんお疲れ様です！
+                    </p>
+                </div>
+
+                <!-- 日付表示 -->
+                <div class="mb-8">
+                    <p class="text-xl text-gray-800 font-medium">
+                        {{ now()->format('Y年n月j日（D）') }}
+                    </p>
+                </div>
+
+                <!-- 時刻表示 -->
+                <div class="mb-12">
+                    <div class="text-6xl font-bold text-gray-800" id="currentTime">
+                        {{ now()->format('H:i') }}
                     </div>
+                </div>
 
-                    <!-- 出勤・退勤ボタン -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                        <!-- 出勤ボタン -->
-                        <div class="text-center">
-                            <form method="POST" action="{{ route('attendance.clock-in') }}">
-                                @csrf
-                                <button type="submit" 
-                                        class="btn btn-primary w-full py-8 text-xl {{ $attendance && $attendance->clock_in ? 'opacity-50 cursor-not-allowed' : '' }}"
-                                        {{ $attendance && $attendance->clock_in ? 'disabled' : '' }}>
-                                    出勤
-                                </button>
-                            </form>
-                            @if($attendance && $attendance->clock_in)
-                                <p class="text-sm text-gray-600 mt-2">
-                                    出勤時刻: {{ $attendance->clock_in->format('H:i') }}
-                                </p>
-                            @endif
-                        </div>
+                <!-- 出勤ボタン（出勤前の状態） -->
+                @if(!$attendance || !$attendance->clock_in)
+                    <div class="mb-8">
+                        <form method="POST" action="{{ route('attendance.clock-in') }}">
+                            @csrf
+                            <button type="submit" 
+                                    class="bg-black text-white px-16 py-4 rounded-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition duration-200 font-medium text-lg">
+                                出勤
+                            </button>
+                        </form>
+                    </div>
+                @endif
 
+                <!-- 出勤後の状態（退勤・休憩ボタン表示） -->
+                @if($attendance && $attendance->clock_in && !$attendance->clock_out)
+                    <div class="space-y-6">
                         <!-- 退勤ボタン -->
-                        <div class="text-center">
+                        <div>
                             <form method="POST" action="{{ route('attendance.clock-out') }}">
                                 @csrf
                                 <button type="submit" 
-                                        class="btn btn-danger w-full py-8 text-xl {{ !$attendance || !$attendance->clock_in || $attendance->clock_out ? 'opacity-50 cursor-not-allowed' : '' }}"
-                                        {{ !$attendance || !$attendance->clock_in || $attendance->clock_out ? 'disabled' : '' }}>
+                                        class="bg-red-600 text-white px-16 py-4 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition duration-200 font-medium text-lg">
                                     退勤
                                 </button>
                             </form>
-                            @if($attendance && $attendance->clock_out)
-                                <p class="text-sm text-gray-600 mt-2">
-                                    退勤時刻: {{ $attendance->clock_out->format('H:i') }}
-                                </p>
-                            @endif
                         </div>
-                    </div>
 
-                    <!-- 休憩ボタン -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                        <!-- 休憩開始ボタン -->
-                        <div class="text-center">
-                            <form method="POST" action="{{ route('attendance.break-start') }}">
-                                @csrf
-                                <button type="submit" 
-                                        class="btn btn-secondary w-full py-6 text-lg {{ !$attendance || !$attendance->clock_in || ($attendance->break_start && !$attendance->break_end) ? 'opacity-50 cursor-not-allowed' : '' }}"
-                                        {{ !$attendance || !$attendance->clock_in || ($attendance->break_start && !$attendance->break_end) ? 'disabled' : '' }}>
-                                    休憩開始
-                                </button>
-                            </form>
-                            @if($attendance && $attendance->break_start && !$attendance->break_end)
-                                <p class="text-sm text-gray-600 mt-2">
-                                    休憩開始: {{ $attendance->break_start->format('H:i') }}
-                                </p>
+                        <!-- 休憩ボタン -->
+                        <div class="flex justify-center space-x-4">
+                            @if(!$attendance->break_start || ($attendance->break_start && $attendance->break_end))
+                                <form method="POST" action="{{ route('attendance.break-start') }}">
+                                    @csrf
+                                    <button type="submit" 
+                                            class="bg-blue-600 text-white px-8 py-3 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-200 font-medium">
+                                        休憩開始
+                                    </button>
+                                </form>
+                            @endif
+
+                            @if($attendance->break_start && !$attendance->break_end)
+                                <form method="POST" action="{{ route('attendance.break-end') }}">
+                                    @csrf
+                                    <button type="submit" 
+                                            class="bg-green-600 text-white px-8 py-3 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition duration-200 font-medium">
+                                        休憩終了
+                                    </button>
+                                </form>
                             @endif
                         </div>
 
-                        <!-- 休憩終了ボタン -->
-                        <div class="text-center">
-                            <form method="POST" action="{{ route('attendance.break-end') }}">
-                                @csrf
-                                <button type="submit" 
-                                        class="btn btn-success w-full py-6 text-lg {{ !$attendance || !$attendance->break_start || $attendance->break_end ? 'opacity-50 cursor-not-allowed' : '' }}"
-                                        {{ !$attendance || !$attendance->break_start || $attendance->break_end ? 'disabled' : '' }}>
-                                    休憩終了
-                                </button>
-                            </form>
-                            @if($attendance && $attendance->break_end)
-                                <p class="text-sm text-gray-600 mt-2">
-                                    休憩終了: {{ $attendance->break_end->format('H:i') }}
-                                </p>
-                            @endif
-                        </div>
-                    </div>
-
-                    <!-- 今日の勤怠状況 -->
-                    @if($attendance)
-                        <div class="card">
-                            <div class="card-header">
-                                <h3 class="text-lg font-semibold">今日の勤怠状況</h3>
-                            </div>
-                            <div class="card-body">
-                                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    <div>
-                                        <label class="form-label">出勤時刻</label>
-                                        <div class="attendance-time">
-                                            {{ $attendance->clock_in ? $attendance->clock_in->format('H:i') : '--:--' }}
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label class="form-label">退勤時刻</label>
-                                        <div class="attendance-time">
-                                            {{ $attendance->clock_out ? $attendance->clock_out->format('H:i') : '--:--' }}
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label class="form-label">休憩時間</label>
-                                        <div class="attendance-time">
-                                            {{ $attendance->formatted_break_time }}
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label class="form-label">勤務時間</label>
-                                        <div class="attendance-time">
-                                            {{ $attendance->formatted_work_time }}
-                                        </div>
-                                    </div>
+                        <!-- 現在の状況表示 -->
+                        <div class="mt-8 p-4 bg-white rounded-lg shadow text-left">
+                            <h3 class="text-lg font-semibold mb-4 text-center">今日の勤怠状況</h3>
+                            <div class="space-y-2">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">出勤時刻:</span>
+                                    <span class="font-medium">{{ $attendance->clock_in->format('H:i') }}</span>
                                 </div>
+                                @if($attendance->break_start)
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">休憩開始:</span>
+                                        <span class="font-medium">{{ $attendance->break_start->format('H:i') }}</span>
+                                    </div>
+                                @endif
+                                @if($attendance->break_end)
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">休憩終了:</span>
+                                        <span class="font-medium">{{ $attendance->break_end->format('H:i') }}</span>
+                                    </div>
+                                @endif
+                                @if($attendance->break_start && !$attendance->break_end)
+                                    <div class="text-center text-blue-600 font-medium">
+                                        休憩中
+                                    </div>
+                                @endif
                             </div>
                         </div>
-                    @endif
-
-                    <!-- ナビゲーション -->
-                    <div class="mt-8 text-center">
-                        <a href="{{ route('attendance.list') }}" class="btn btn-secondary mr-4">
-                            勤怠一覧を見る
-                        </a>
-                        <a href="{{ route('stamp_correction_request.list') }}" class="btn btn-secondary">
-                            修正申請一覧
-                        </a>
                     </div>
-                </div>
+                @endif
+
+                <!-- 退勤後の状態 -->
+                @if($attendance && $attendance->clock_out)
+                    <div class="p-4 bg-white rounded-lg shadow text-left">
+                        <h3 class="text-lg font-semibold mb-4 text-center">本日の勤怠（完了）</h3>
+                        <div class="space-y-2">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">出勤時刻:</span>
+                                <span class="font-medium">{{ $attendance->clock_in->format('H:i') }}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">退勤時刻:</span>
+                                <span class="font-medium">{{ $attendance->clock_out->format('H:i') }}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">休憩時間:</span>
+                                <span class="font-medium">{{ $attendance->formatted_break_time }}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">勤務時間:</span>
+                                <span class="font-medium">{{ $attendance->formatted_work_time }}</span>
+                            </div>
+                        </div>
+                        <div class="text-center mt-4 text-green-600 font-medium">
+                            お疲れ様でした！
+                        </div>
+                    </div>
+                @endif
             </div>
         </div>
     </div>
 
     <script>
-        // 現在時刻を1秒ごとに更新
+        // 現在時刻を1分ごとに更新（秒は表示しないため）
         function updateTime() {
             const now = new Date();
             const timeString = now.toLocaleTimeString('ja-JP', { 
                 hour: '2-digit', 
-                minute: '2-digit', 
-                second: '2-digit' 
+                minute: '2-digit'
             });
             document.getElementById('currentTime').textContent = timeString;
         }
 
-        setInterval(updateTime, 1000);
+        setInterval(updateTime, 60000); // 1分ごと
     </script>
-</x-app-layout>
+</body>
+</html>
