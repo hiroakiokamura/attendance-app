@@ -70,7 +70,7 @@
 
             <!-- 申請一覧テーブル -->
             <div class="max-w-4xl mx-auto">
-                <div class="bg-white border-2 border-blue-400 rounded-lg shadow overflow-hidden">
+                <div class="bg-white rounded-lg shadow overflow-hidden">
                     <table class="min-w-full">
                         <thead class="bg-gray-50">
                             <tr>
@@ -119,7 +119,7 @@
                                         {{ $request->created_at->format('Y/m/d') }}
                                     </td>
                                     <td class="px-6 py-4 text-center text-sm text-gray-900">
-                                        <a href="#" class="text-blue-600 hover:text-blue-800 underline">
+                                        <a href="{{ route('attendance.detail', ['id' => $request->attendance_id, 'pending' => true]) }}" class="text-blue-600 hover:text-blue-800 underline">
                                             詳細
                                         </a>
                                     </td>

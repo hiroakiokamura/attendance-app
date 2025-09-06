@@ -184,12 +184,17 @@ class AttendanceController extends Controller
     /**
      * PG05: 勤怠詳細画面
      */
-    public function detail($id)
+    public function detail(Request $request, $id)
     {
         $user = Auth::user();
         
         $attendance = Attendance::where('user_id', $user->id)
             ->findOrFail($id);
+
+        // 申請一覧からの遷移で承認待ち状態を表示
+        if ($request->has('pending')) {
+            session()->flash('pending_request', true);
+        }
 
         return view('attendance.detail', compact('attendance'));
     }
