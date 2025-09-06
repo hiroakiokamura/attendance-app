@@ -134,9 +134,10 @@
                                 備考
                             </label>
                             <div class="flex-1 ml-8">
-                                <textarea readonly
-                                          class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 resize-none"
-                                          rows="3">{{ $attendance->notes ?? '電車遅延のため' }}</textarea>
+                                <textarea name="notes"
+                                          class="w-full px-3 py-2 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                          rows="3"
+                                          placeholder="備考を入力してください">{{ $attendance->notes ?? '電車遅延のため' }}</textarea>
                             </div>
                         </div>
                     </div>
