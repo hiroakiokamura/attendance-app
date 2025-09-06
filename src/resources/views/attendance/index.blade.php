@@ -95,26 +95,25 @@
 
                 <!-- 出勤後の状態（退勤・休憩ボタン表示） -->
                 @if($attendance && $attendance->clock_in && !$attendance->clock_out)
-                    <div class="space-y-6">
-                        <!-- 退勤ボタン -->
-                        <div>
+                    <div class="mb-8">
+                        <!-- 退勤・休憩ボタン（横並び） -->
+                        <div class="flex justify-center space-x-6">
+                            <!-- 退勤ボタン -->
                             <form method="POST" action="{{ route('attendance.clock-out') }}">
                                 @csrf
                                 <button type="submit" 
-                                        class="bg-red-600 text-white px-16 py-4 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition duration-200 font-medium text-lg">
+                                        class="bg-black text-white px-12 py-4 rounded-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition duration-200 font-medium text-lg">
                                     退勤
                                 </button>
                             </form>
-                        </div>
 
-                        <!-- 休憩ボタン -->
-                        <div class="flex justify-center space-x-4">
+                            <!-- 休憩入/休憩戻ボタン -->
                             @if(!$attendance->break_start || ($attendance->break_start && $attendance->break_end))
                                 <form method="POST" action="{{ route('attendance.break-start') }}">
                                     @csrf
                                     <button type="submit" 
-                                            class="bg-blue-600 text-white px-8 py-3 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-200 font-medium">
-                                        休憩開始
+                                            class="bg-black text-white px-12 py-4 rounded-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition duration-200 font-medium text-lg">
+                                        休憩入
                                     </button>
                                 </form>
                             @endif
@@ -123,39 +122,11 @@
                                 <form method="POST" action="{{ route('attendance.break-end') }}">
                                     @csrf
                                     <button type="submit" 
-                                            class="bg-green-600 text-white px-8 py-3 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition duration-200 font-medium">
-                                        休憩終了
+                                            class="bg-black text-white px-12 py-4 rounded-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition duration-200 font-medium text-lg">
+                                        休憩戻
                                     </button>
                                 </form>
                             @endif
-                        </div>
-
-                        <!-- 現在の状況表示 -->
-                        <div class="mt-8 p-4 bg-white rounded-lg shadow text-left">
-                            <h3 class="text-lg font-semibold mb-4 text-center">今日の勤怠状況</h3>
-                            <div class="space-y-2">
-                                <div class="flex justify-between">
-                                    <span class="text-gray-600">出勤時刻:</span>
-                                    <span class="font-medium">{{ $attendance->clock_in->format('H:i') }}</span>
-                                </div>
-                                @if($attendance->break_start)
-                                    <div class="flex justify-between">
-                                        <span class="text-gray-600">休憩開始:</span>
-                                        <span class="font-medium">{{ $attendance->break_start->format('H:i') }}</span>
-                                    </div>
-                                @endif
-                                @if($attendance->break_end)
-                                    <div class="flex justify-between">
-                                        <span class="text-gray-600">休憩終了:</span>
-                                        <span class="font-medium">{{ $attendance->break_end->format('H:i') }}</span>
-                                    </div>
-                                @endif
-                                @if($attendance->break_start && !$attendance->break_end)
-                                    <div class="text-center text-blue-600 font-medium">
-                                        休憩中
-                                    </div>
-                                @endif
-                            </div>
                         </div>
                     </div>
                 @endif
