@@ -80,15 +80,15 @@
                                 出勤・退勤
                             </label>
                             <div class="flex-1 ml-8 flex items-center space-x-4">
-                                <input type="text" 
-                                       value="{{ $attendance->clock_in ? $attendance->clock_in->format('H:i') : '--:--' }}" 
-                                       readonly
-                                       class="w-20 px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-center">
+                                <input type="time" 
+                                       name="clock_in"
+                                       value="{{ $attendance->clock_in ? $attendance->clock_in->format('H:i') : '' }}" 
+                                       class="w-20 px-3 py-2 border border-gray-300 rounded-md text-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                 <span class="text-gray-500">～</span>
-                                <input type="text" 
-                                       value="{{ $attendance->clock_out ? $attendance->clock_out->format('H:i') : '--:--' }}" 
-                                       readonly
-                                       class="w-20 px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-center">
+                                <input type="time" 
+                                       name="clock_out"
+                                       value="{{ $attendance->clock_out ? $attendance->clock_out->format('H:i') : '' }}" 
+                                       class="w-20 px-3 py-2 border border-gray-300 rounded-md text-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                             </div>
                         </div>
 
@@ -98,15 +98,15 @@
                                 休憩
                             </label>
                             <div class="flex-1 ml-8 flex items-center space-x-4">
-                                <input type="text" 
-                                       value="{{ $attendance->break_start ? $attendance->break_start->format('H:i') : '--:--' }}" 
-                                       readonly
-                                       class="w-20 px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-center">
+                                <input type="time" 
+                                       name="break_start"
+                                       value="{{ $attendance->break_start ? $attendance->break_start->format('H:i') : '' }}" 
+                                       class="w-20 px-3 py-2 border border-gray-300 rounded-md text-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                 <span class="text-gray-500">～</span>
-                                <input type="text" 
-                                       value="{{ $attendance->break_end ? $attendance->break_end->format('H:i') : '--:--' }}" 
-                                       readonly
-                                       class="w-20 px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-center">
+                                <input type="time" 
+                                       name="break_end"
+                                       value="{{ $attendance->break_end ? $attendance->break_end->format('H:i') : '' }}" 
+                                       class="w-20 px-3 py-2 border border-gray-300 rounded-md text-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                             </div>
                         </div>
 
@@ -116,15 +116,15 @@
                                 休憩2
                             </label>
                             <div class="flex-1 ml-8 flex items-center space-x-4">
-                                <input type="text" 
-                                       value="--:--" 
-                                       readonly
-                                       class="w-20 px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-center">
+                                <input type="time" 
+                                       name="break2_start"
+                                       value="" 
+                                       class="w-20 px-3 py-2 border border-gray-300 rounded-md text-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                 <span class="text-gray-500">～</span>
-                                <input type="text" 
-                                       value="--:--" 
-                                       readonly
-                                       class="w-20 px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-center">
+                                <input type="time" 
+                                       name="break2_end"
+                                       value="" 
+                                       class="w-20 px-3 py-2 border border-gray-300 rounded-md text-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                             </div>
                         </div>
 
