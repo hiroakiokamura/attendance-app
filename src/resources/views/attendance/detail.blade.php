@@ -52,7 +52,11 @@
             <!-- 勤怠詳細フォーム -->
             <div class="max-w-2xl mx-auto">
                 <div class="bg-white rounded-lg shadow-lg p-8">
-                    <div class="space-y-6">
+                    <form method="POST" action="{{ route('stamp_correction_request.store_from_detail') }}">
+                        @csrf
+                        <input type="hidden" name="attendance_id" value="{{ $attendance->id }}">
+                        
+                        <div class="space-y-6">
                         <!-- 名前 -->
                         <div class="flex items-center">
                             <label class="w-24 text-sm font-medium text-gray-700">
@@ -148,13 +152,23 @@
                         </div>
                     </div>
 
-                    <!-- 修正ボタン -->
-                    <div class="mt-8 flex justify-end">
-                        <a href="{{ route('attendance.edit', $attendance) }}" 
-                           class="bg-black text-white px-8 py-3 rounded-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition duration-200 font-medium">
-                            修正
-                        </a>
-                    </div>
+                        <!-- エラーメッセージ -->
+                        @if($errors->any())
+                            <div class="mt-6 space-y-2">
+                                @foreach($errors->all() as $error)
+                                    <p class="text-sm text-red-600">{{ $error }}</p>
+                                @endforeach
+                            </div>
+                        @endif
+
+                        <!-- 修正申請ボタン -->
+                        <div class="mt-8 flex justify-end">
+                            <button type="submit" 
+                                    class="bg-black text-white px-8 py-3 rounded-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition duration-200 font-medium">
+                                修正申請
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>

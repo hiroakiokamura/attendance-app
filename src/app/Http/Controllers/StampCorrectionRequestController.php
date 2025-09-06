@@ -83,6 +83,88 @@ class StampCorrectionRequestController extends Controller
     }
 
     /**
+     * 詳細画面からの修正申請保存
+     */
+    public function storeFromDetail(Request $request)
+    {
+        $request->validate([
+            'attendance_id' => 'required|exists:attendances,id',
+            'clock_in' => 'nullable|date_format:H:i',
+            'clock_out' => 'nullable|date_format:H:i',
+            'break_start' => 'nullable|date_format:H:i',
+            'break_end' => 'nullable|date_format:H:i',
+            'break2_start' => 'nullable|date_format:H:i',
+            'break2_end' => 'nullable|date_format:H:i',
+            'notes' => 'required|string|max:1000',
+        ]);
+
+        $attendance = Attendance::findOrFail($request->attendance_id);
+        
+        // 自分の勤怠記録かチェック
+        if ($attendance->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        $changes = [];
+        $reason = $request->notes;
+
+        // 各フィールドの変更をチェック
+        $fields = [
+            'clock_in' => '出勤時刻',
+            'clock_out' => '退勤時刻',
+            'break_start' => '休憩開始時刻',
+            'break_end' => '休憩終了時刻'
+        ];
+
+        foreach ($fields as $field => $label) {
+            $originalValue = $attendance->$field;
+            $requestedValue = $request->$field;
+
+            if ($requestedValue && $originalValue) {
+                $originalTime = $originalValue->format('H:i');
+                if ($originalTime !== $requestedValue) {
+                    $changes[] = [
+                        'field' => $field,
+                        'label' => $label,
+                        'original' => $originalValue,
+                        'requested' => $requestedValue
+                    ];
+                }
+            } elseif ($requestedValue && !$originalValue) {
+                $changes[] = [
+                    'field' => $field,
+                    'label' => $label,
+                    'original' => null,
+                    'requested' => $requestedValue
+                ];
+            }
+        }
+
+        // 変更がない場合はエラー
+        if (empty($changes)) {
+            return back()->withErrors(['修正する項目がありません。']);
+        }
+
+        // 各変更に対して修正申請を作成
+        foreach ($changes as $change) {
+            $requestedDateTime = Carbon::parse($attendance->work_date->format('Y-m-d') . ' ' . $change['requested']);
+
+            StampCorrectionRequest::create([
+                'user_id' => Auth::id(),
+                'attendance_id' => $attendance->id,
+                'request_type' => $change['field'],
+                'original_time' => $change['original'],
+                'requested_time' => $requestedDateTime,
+                'reason' => $reason,
+                'status' => 'pending',
+            ]);
+        }
+
+        return redirect()->route('stamp_correction_request.list')
+            ->with('success', count($changes) . '件の修正申請を送信しました。');
+    }
+
+    /**
      * PG12: 申請一覧画面（管理者）
      */
     public function adminList(Request $request)

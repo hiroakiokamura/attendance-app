@@ -42,6 +42,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/stamp_correction_request/list', [StampCorrectionRequestController::class, 'list'])->name('stamp_correction_request.list');
     Route::get('/stamp_correction_request/create/{attendance}', [StampCorrectionRequestController::class, 'create'])->name('stamp_correction_request.create');
     Route::post('/stamp_correction_request', [StampCorrectionRequestController::class, 'store'])->name('stamp_correction_request.store');
+    Route::post('/stamp_correction_request/from_detail', [StampCorrectionRequestController::class, 'storeFromDetail'])->name('stamp_correction_request.store_from_detail');
     
     // プロフィール管理
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
