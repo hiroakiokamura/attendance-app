@@ -22,10 +22,10 @@
                 <!-- ナビゲーション -->
                 <nav class="flex items-center space-x-6">
                     <a href="{{ route('attendance.index') }}" class="text-white hover:text-gray-300 transition-colors">
-                        動会
+                        勤怠
                     </a>
                     <a href="{{ route('attendance.list') }}" class="text-white hover:text-gray-300 transition-colors">
-                        動名一覧
+                        勤怠一覧
                     </a>
                     <a href="{{ route('stamp_correction_request.list') }}" class="text-white hover:text-gray-300 transition-colors">
                         申請
