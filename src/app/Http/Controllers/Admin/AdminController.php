@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -158,24 +159,27 @@ class AdminController extends Controller
         $attendance = Attendance::findOrFail($id);
 
         $request->validate([
-            'clock_in' => 'required|date_format:H:i',
-            'clock_out' => 'required|date_format:H:i|after:clock_in',
-            'break_start' => 'nullable|date_format:H:i|after:clock_in|before:clock_out',
-            'break_end' => 'nullable|date_format:H:i|after:break_start|before:clock_out',
-            'notes' => 'required|string|max:1000',
+            'clock_in' => 'nullable|date_format:H:i',
+            'clock_out' => 'nullable|date_format:H:i',
+            'break_start' => 'nullable|date_format:H:i',
+            'break_end' => 'nullable|date_format:H:i',
+            'break2_start' => 'nullable|date_format:H:i',
+            'break2_end' => 'nullable|date_format:H:i',
+            'notes' => 'nullable|string|max:1000',
         ], [
-            'clock_out.after' => '出勤時間もしくは退勤時間が不適切な値です',
-            'break_start.after' => '休憩時間が不適切な値です',
-            'break_start.before' => '休憩時間が不適切な値です',
-            'break_end.after' => '休憩時間もしくは退勤時間が不適切な値です',
-            'break_end.before' => '休憩時間もしくは退勤時間が不適切な値です',
-            'notes.required' => '備考を記入してください',
+            'clock_in.date_format' => '出勤時刻の形式が正しくありません（HH:MM）',
+            'clock_out.date_format' => '退勤時刻の形式が正しくありません（HH:MM）',
+            'break_start.date_format' => '休憩開始時刻の形式が正しくありません（HH:MM）',
+            'break_end.date_format' => '休憩終了時刻の形式が正しくありません（HH:MM）',
+            'break2_start.date_format' => '休憩2開始時刻の形式が正しくありません（HH:MM）',
+            'break2_end.date_format' => '休憩2終了時刻の形式が正しくありません（HH:MM）',
+            'notes.max' => '備考は1000文字以内で入力してください',
         ]);
 
         // 時刻を作成
         $workDate = $attendance->work_date;
-        $clockIn = Carbon::parse($workDate->format('Y-m-d') . ' ' . $request->clock_in);
-        $clockOut = Carbon::parse($workDate->format('Y-m-d') . ' ' . $request->clock_out);
+        $clockIn = $request->clock_in ? Carbon::parse($workDate->format('Y-m-d') . ' ' . $request->clock_in) : null;
+        $clockOut = $request->clock_out ? Carbon::parse($workDate->format('Y-m-d') . ' ' . $request->clock_out) : null;
         
         $breakStart = $request->break_start ? Carbon::parse($workDate->format('Y-m-d') . ' ' . $request->break_start) : null;
         $breakEnd = $request->break_end ? Carbon::parse($workDate->format('Y-m-d') . ' ' . $request->break_end) : null;
@@ -187,7 +191,11 @@ class AdminController extends Controller
         }
 
         // 勤務時間を計算
-        $totalWorkTime = $clockIn->diffInMinutes($clockOut) - $totalBreakTime;
+        $totalWorkTime = null;
+        if ($clockIn && $clockOut) {
+            $totalWorkMinutes = $clockIn->diffInMinutes($clockOut) - $totalBreakTime;
+            $totalWorkTime = intval($totalWorkMinutes / 60) . ':' . sprintf('%02d', $totalWorkMinutes % 60);
+        }
 
         $attendance->update([
             'clock_in' => $clockIn,
@@ -195,11 +203,12 @@ class AdminController extends Controller
             'break_start' => $breakStart,
             'break_end' => $breakEnd,
             'total_work_time' => $totalWorkTime,
-            'total_break_time' => $totalBreakTime,
+            'total_break_time' => $totalBreakTime > 0 ? intval($totalBreakTime / 60) . ':' . sprintf('%02d', $totalBreakTime % 60) : null,
             'notes' => $request->notes,
         ]);
 
         return redirect()->route('admin.attendance.detail', $attendance->id)
-            ->with('success', '勤怠情報を更新しました。');
+            ->with('success', '勤怠情報を更新しました。')
+            ->withInput();
     }
 }

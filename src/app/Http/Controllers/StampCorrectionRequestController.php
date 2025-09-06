@@ -162,7 +162,8 @@ class StampCorrectionRequestController extends Controller
 
         return redirect()->route('attendance.detail', $attendance->id)
             ->with('success', count($changes) . '件の修正申請を送信しました。')
-            ->with('pending_request', true);
+            ->with('pending_request', true)
+            ->withInput($request->all());
     }
 
     /**

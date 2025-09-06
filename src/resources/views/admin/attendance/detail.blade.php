@@ -1,195 +1,188 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            勤怠詳細（管理者） - {{ $attendance->user->name }}さんの{{ $attendance->work_date->format('Y年m月d日 (D)') }}
-        </h2>
-    </x-slot>
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>勤怠詳細 - COACHTECH</title>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- ヘッダー -->
+    <header class="bg-black text-white py-4">
+        <div class="container mx-auto px-4">
+            <div class="flex items-center justify-between">
+                <!-- COACHTECHロゴ -->
+                <div class="flex items-center">
+                    <img src="{{ asset('images/logos/coachtech-logo.svg') }}" 
+                         alt="COACHTECH" 
+                         class="h-8 w-auto">
+                </div>
 
-    <div class="py-12">
-        <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
-            <!-- アラートメッセージ -->
+                <!-- ナビゲーションメニュー -->
+                <nav class="flex space-x-6">
+                    <a href="{{ route('admin.attendance.list') }}" 
+                       class="text-white hover:text-gray-300 transition-colors {{ request()->routeIs('admin.attendance.*') ? 'border-b-2 border-white' : '' }}">
+                        勤怠一覧
+                    </a>
+                    <a href="{{ route('admin.staff.list') }}" 
+                       class="text-white hover:text-gray-300 transition-colors {{ request()->routeIs('admin.staff.*') ? 'border-b-2 border-white' : '' }}">
+                        スタッフ一覧
+                    </a>
+                    <a href="{{ route('admin.stamp_correction_request.list') }}" 
+                       class="text-white hover:text-gray-300 transition-colors {{ request()->routeIs('admin.stamp_correction_request.*') ? 'border-b-2 border-white' : '' }}">
+                        申請一覧
+                    </a>
+                    <form method="POST" action="{{ route('admin.logout') }}" class="inline">
+                        @csrf
+                        <button type="submit" class="text-white hover:text-gray-300 transition-colors">
+                            ログアウト
+                        </button>
+                    </form>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- メインコンテンツ -->
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-4xl mx-auto">
+            <!-- タイトル -->
+            <div class="mb-8">
+                <h1 class="text-2xl font-bold text-gray-800">勤怠詳細</h1>
+            </div>
+
+            <!-- 成功メッセージ -->
             @if (session('success'))
-                <div class="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
+                <div class="mb-6 p-4 bg-green-100 border border-green-400 text-green-700 rounded max-w-2xl mx-auto">
                     {{ session('success') }}
                 </div>
             @endif
 
-            <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg">
-                <div class="p-6">
-                    <!-- ナビゲーション -->
-                    <div class="mb-6">
-                        <a href="{{ route('admin.attendance.list') }}" class="btn btn-secondary">
-                            ← 勤怠一覧
-                        </a>
-                    </div>
+            <!-- エラーメッセージ -->
+            @if($errors->any())
+                <div class="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded max-w-2xl mx-auto">
+                    @foreach($errors->all() as $error)
+                        <p>{{ $error }}</p>
+                    @endforeach
+                </div>
+            @endif
 
-                    <!-- 基本情報 -->
-                    <div class="card mb-6">
-                        <div class="card-header">
-                            <h3 class="text-lg font-semibold">基本情報</h3>
-                        </div>
-                        <div class="card-body">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="form-label">氏名</label>
-                                    <p class="text-gray-900">{{ $attendance->user->name }}</p>
+            <!-- 勤怠詳細フォーム -->
+            <div class="max-w-2xl mx-auto">
+                <div class="bg-white rounded-lg shadow-lg p-8">
+                    <form method="POST" action="{{ route('admin.attendance.update', $attendance->id) }}">
+                        @csrf
+                        @method('PUT')
+                        
+                        <div class="space-y-6">
+                            <!-- 名前 -->
+                            <div class="flex items-center">
+                                <label class="w-24 text-sm font-medium text-gray-700">
+                                    名前
+                                </label>
+                                <div class="flex-1 ml-8">
+                                    <span class="text-gray-900">{{ $attendance->user->name }}</span>
                                 </div>
-                                <div>
-                                    <label class="form-label">メールアドレス</label>
-                                    <p class="text-gray-900">{{ $attendance->user->email }}</p>
+                            </div>
+
+                            <!-- 日付 -->
+                            <div class="flex items-center">
+                                <label class="w-24 text-sm font-medium text-gray-700">
+                                    日付
+                                </label>
+                                <div class="flex-1 ml-8 flex space-x-4">
+                                    <span class="text-gray-900">{{ $attendance->work_date->format('Y年') }}</span>
+                                    <span class="text-gray-900">{{ $attendance->work_date->format('n月j日') }}</span>
                                 </div>
-                                <div>
-                                    <label class="form-label">日付</label>
-                                    <p class="text-gray-900">{{ $attendance->work_date->format('Y年m月d日 (D)') }}</p>
+                            </div>
+
+                            <!-- 出勤・退勤 -->
+                            <div class="flex items-center">
+                                <label class="w-24 text-sm font-medium text-gray-700">
+                                    出勤・退勤
+                                </label>
+                                <div class="flex-1 ml-8 flex items-center space-x-4">
+                                    <input type="text" 
+                                           name="clock_in"
+                                           value="{{ old('clock_in', $attendance->clock_in ? $attendance->clock_in->format('H:i') : '') }}" 
+                                           placeholder="09:00"
+                                           class="w-20 px-3 py-2 border border-gray-300 rounded-md text-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <span class="text-gray-500">～</span>
+                                    <input type="text" 
+                                           name="clock_out"
+                                           value="{{ old('clock_out', $attendance->clock_out ? $attendance->clock_out->format('H:i') : '') }}" 
+                                           placeholder="20:00"
+                                           class="w-20 px-3 py-2 border border-gray-300 rounded-md text-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                            </div>
+
+                            <!-- 休憩 -->
+                            <div class="flex items-center">
+                                <label class="w-24 text-sm font-medium text-gray-700">
+                                    休憩
+                                </label>
+                                <div class="flex-1 ml-8 flex items-center space-x-4">
+                                    <input type="text" 
+                                           name="break_start"
+                                           value="{{ old('break_start', $attendance->break_start ? $attendance->break_start->format('H:i') : '') }}" 
+                                           placeholder="12:00"
+                                           class="w-20 px-3 py-2 border border-gray-300 rounded-md text-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <span class="text-gray-500">～</span>
+                                    <input type="text" 
+                                           name="break_end"
+                                           value="{{ old('break_end', $attendance->break_end ? $attendance->break_end->format('H:i') : '') }}" 
+                                           placeholder="13:00"
+                                           class="w-20 px-3 py-2 border border-gray-300 rounded-md text-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                            </div>
+
+                            <!-- 休憩2 -->
+                            <div class="flex items-center">
+                                <label class="w-24 text-sm font-medium text-gray-700">
+                                    休憩2
+                                </label>
+                                <div class="flex-1 ml-8 flex items-center space-x-4">
+                                    <input type="text" 
+                                           name="break2_start"
+                                           value="{{ old('break2_start', '') }}" 
+                                           placeholder="15:00"
+                                           class="w-20 px-3 py-2 border border-gray-300 rounded-md text-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    <span class="text-gray-500">～</span>
+                                    <input type="text" 
+                                           name="break2_end"
+                                           value="{{ old('break2_end', '') }}" 
+                                           placeholder="15:15"
+                                           class="w-20 px-3 py-2 border border-gray-300 rounded-md text-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                            </div>
+
+                            <!-- 備考 -->
+                            <div class="flex">
+                                <label class="w-24 text-sm font-medium text-gray-700 pt-2">
+                                    備考
+                                </label>
+                                <div class="flex-1 ml-8">
+                                    <textarea name="notes"
+                                              class="w-full px-3 py-2 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                              rows="3"
+                                              placeholder="備考を入力してください">{{ old('notes', $attendance->notes ?? '') }}</textarea>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- 打刻情報 -->
-                    <div class="card mb-6">
-                        <div class="card-header">
-                            <h3 class="text-lg font-semibold">打刻情報</h3>
+                        <!-- 修正ボタン -->
+                        <div class="mt-8 flex justify-end">
+                            <button type="submit" 
+                                    class="bg-black text-white px-8 py-3 rounded-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition duration-200 font-medium">
+                                修正
+                            </button>
                         </div>
-                        <div class="card-body">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <!-- 出勤・退勤 -->
-                                <div>
-                                    <h4 class="font-semibold text-gray-700 mb-3">出勤・退勤</h4>
-                                    <div class="space-y-2">
-                                        <div class="flex justify-between">
-                                            <span class="text-gray-600">出勤時刻:</span>
-                                            <span class="attendance-time">
-                                                {{ $attendance->clock_in ? $attendance->clock_in->format('H:i') : '未打刻' }}
-                                            </span>
-                                        </div>
-                                        <div class="flex justify-between">
-                                            <span class="text-gray-600">退勤時刻:</span>
-                                            <span class="attendance-time">
-                                                {{ $attendance->clock_out ? $attendance->clock_out->format('H:i') : '未打刻' }}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- 休憩 -->
-                                <div>
-                                    <h4 class="font-semibold text-gray-700 mb-3">休憩</h4>
-                                    <div class="space-y-2">
-                                        <div class="flex justify-between">
-                                            <span class="text-gray-600">休憩開始:</span>
-                                            <span class="attendance-time">
-                                                {{ $attendance->break_start ? $attendance->break_start->format('H:i') : '未取得' }}
-                                            </span>
-                                        </div>
-                                        <div class="flex justify-between">
-                                            <span class="text-gray-600">休憩終了:</span>
-                                            <span class="attendance-time">
-                                                {{ $attendance->break_end ? $attendance->break_end->format('H:i') : '未取得' }}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 勤務時間 -->
-                    <div class="card mb-6">
-                        <div class="card-header">
-                            <h3 class="text-lg font-semibold">勤務時間</h3>
-                        </div>
-                        <div class="card-body">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div class="flex justify-between">
-                                    <span class="text-gray-600">総勤務時間:</span>
-                                    <span class="attendance-time text-blue-600">
-                                        {{ $attendance->formatted_work_time }}
-                                    </span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span class="text-gray-600">休憩時間:</span>
-                                    <span class="attendance-time text-yellow-600">
-                                        {{ $attendance->formatted_break_time }}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 備考 -->
-                    @if($attendance->notes)
-                    <div class="card mb-6">
-                        <div class="card-header">
-                            <h3 class="text-lg font-semibold">備考</h3>
-                        </div>
-                        <div class="card-body">
-                            <p class="text-gray-900">{{ $attendance->notes }}</p>
-                        </div>
-                    </div>
-                    @endif
-
-                    <!-- 編集操作 -->
-                    <div class="card mb-6">
-                        <div class="card-header">
-                            <h3 class="text-lg font-semibold">勤怠情報編集</h3>
-                        </div>
-                        <div class="card-body">
-                            <p class="text-gray-600 mb-4">
-                                管理者権限で勤怠情報を直接編集できます。
-                            </p>
-                            <a href="{{ route('admin.attendance.edit', $attendance) }}" 
-                               class="btn btn-primary">
-                                勤怠情報を編集
-                            </a>
-                        </div>
-                    </div>
-
-                    <!-- 修正申請履歴 -->
-                    @if($attendance->stampCorrectionRequests->count() > 0)
-                    <div class="card">
-                        <div class="card-header">
-                            <h3 class="text-lg font-semibold">修正申請履歴</h3>
-                        </div>
-                        <div class="card-body">
-                            <div class="overflow-x-auto">
-                                <table class="min-w-full divide-y divide-gray-200">
-                                    <thead class="bg-gray-50">
-                                        <tr>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">申請日時</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">修正項目</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ステータス</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">理由</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="bg-white divide-y divide-gray-200">
-                                        @foreach($attendance->stampCorrectionRequests as $request)
-                                        <tr>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                {{ $request->created_at->format('Y/m/d H:i') }}
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                {{ $request->request_type_label }}
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                <span class="attendance-status {{ $request->status_class }}">
-                                                    {{ $request->status_label }}
-                                                </span>
-                                            </td>
-                                            <td class="px-6 py-4 text-sm text-gray-900">
-                                                {{ $request->reason }}
-                                            </td>
-                                        </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                    @endif
+                    </form>
                 </div>
             </div>
         </div>
     </div>
-</x-app-layout>
+</body>
+</html>
 

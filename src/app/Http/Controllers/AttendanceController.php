@@ -194,6 +194,30 @@ class AttendanceController extends Controller
         // 申請一覧からの遷移で承認待ち状態を表示
         if ($request->has('pending')) {
             session()->flash('pending_request', true);
+            
+            // 最新の承認待ち申請データを取得して入力フィールドに反映
+            $pendingRequests = \App\Models\StampCorrectionRequest::where('attendance_id', $id)
+                ->where('status', 'pending')
+                ->get();
+            
+            $inputData = [];
+            foreach ($pendingRequests as $pendingRequest) {
+                if ($pendingRequest->request_type === 'clock_in') {
+                    $inputData['clock_in'] = $pendingRequest->requested_time->format('H:i');
+                } elseif ($pendingRequest->request_type === 'clock_out') {
+                    $inputData['clock_out'] = $pendingRequest->requested_time->format('H:i');
+                } elseif ($pendingRequest->request_type === 'break_start') {
+                    $inputData['break_start'] = $pendingRequest->requested_time->format('H:i');
+                } elseif ($pendingRequest->request_type === 'break_end') {
+                    $inputData['break_end'] = $pendingRequest->requested_time->format('H:i');
+                }
+                // 備考は最新の申請の理由を使用
+                $inputData['notes'] = $pendingRequest->reason;
+            }
+            
+            if (!empty($inputData)) {
+                session()->flash('_old_input', $inputData);
+            }
         }
 
         return view('attendance.detail', compact('attendance'));
