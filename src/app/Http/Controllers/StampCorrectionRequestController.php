@@ -160,8 +160,9 @@ class StampCorrectionRequestController extends Controller
             ]);
         }
 
-        return redirect()->route('stamp_correction_request.list')
-            ->with('success', count($changes) . '件の修正申請を送信しました。');
+        return redirect()->route('attendance.detail', $attendance->id)
+            ->with('success', count($changes) . '件の修正申請を送信しました。')
+            ->with('pending_request', true);
     }
 
     /**

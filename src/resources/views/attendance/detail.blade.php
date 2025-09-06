@@ -49,14 +49,27 @@
                 <h1 class="text-2xl font-bold text-gray-800">勤怠詳細</h1>
             </div>
 
+            <!-- 成功メッセージ -->
+            @if (session('success'))
+                <div class="mb-6 p-4 bg-green-100 border border-green-400 text-green-700 rounded max-w-2xl mx-auto">
+                    {{ session('success') }}
+                </div>
+            @endif
+
             <!-- 勤怠詳細フォーム -->
             <div class="max-w-2xl mx-auto">
                 <div class="bg-white rounded-lg shadow-lg p-8">
-                    <form method="POST" action="{{ route('stamp_correction_request.store_from_detail') }}">
-                        @csrf
-                        <input type="hidden" name="attendance_id" value="{{ $attendance->id }}">
-                        
+                    @if(session('pending_request'))
+                        <!-- 承認待ち状態：表示のみ -->
                         <div class="space-y-6">
+                    @else
+                        <!-- 通常状態：修正申請可能 -->
+                        <form method="POST" action="{{ route('stamp_correction_request.store_from_detail') }}">
+                            @csrf
+                            <input type="hidden" name="attendance_id" value="{{ $attendance->id }}">
+                            
+                            <div class="space-y-6">
+                    @endif
                         <!-- 名前 -->
                         <div class="flex items-center">
                             <label class="w-24 text-sm font-medium text-gray-700">
@@ -86,15 +99,17 @@
                             <div class="flex-1 ml-8 flex items-center space-x-4">
                                 <input type="text" 
                                        name="clock_in"
-                                       value="{{ $attendance->clock_in ? $attendance->clock_in->format('H:i') : '' }}" 
+                                       value="{{ old('clock_in', $attendance->clock_in ? $attendance->clock_in->format('H:i') : '') }}" 
                                        placeholder="09:00"
-                                       class="w-20 px-3 py-2 border border-gray-300 rounded-md text-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                       {{ session('pending_request') ? 'readonly' : '' }}
+                                       class="w-20 px-3 py-2 border border-gray-300 rounded-md text-center {{ session('pending_request') ? 'bg-gray-50' : 'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500' }}">
                                 <span class="text-gray-500">～</span>
                                 <input type="text" 
                                        name="clock_out"
-                                       value="{{ $attendance->clock_out ? $attendance->clock_out->format('H:i') : '' }}" 
+                                       value="{{ old('clock_out', $attendance->clock_out ? $attendance->clock_out->format('H:i') : '') }}" 
                                        placeholder="18:00"
-                                       class="w-20 px-3 py-2 border border-gray-300 rounded-md text-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                       {{ session('pending_request') ? 'readonly' : '' }}
+                                       class="w-20 px-3 py-2 border border-gray-300 rounded-md text-center {{ session('pending_request') ? 'bg-gray-50' : 'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500' }}">
                             </div>
                         </div>
 
@@ -106,15 +121,17 @@
                             <div class="flex-1 ml-8 flex items-center space-x-4">
                                 <input type="text" 
                                        name="break_start"
-                                       value="{{ $attendance->break_start ? $attendance->break_start->format('H:i') : '' }}" 
+                                       value="{{ old('break_start', $attendance->break_start ? $attendance->break_start->format('H:i') : '') }}" 
                                        placeholder="12:00"
-                                       class="w-20 px-3 py-2 border border-gray-300 rounded-md text-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                       {{ session('pending_request') ? 'readonly' : '' }}
+                                       class="w-20 px-3 py-2 border border-gray-300 rounded-md text-center {{ session('pending_request') ? 'bg-gray-50' : 'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500' }}">
                                 <span class="text-gray-500">～</span>
                                 <input type="text" 
                                        name="break_end"
-                                       value="{{ $attendance->break_end ? $attendance->break_end->format('H:i') : '' }}" 
+                                       value="{{ old('break_end', $attendance->break_end ? $attendance->break_end->format('H:i') : '') }}" 
                                        placeholder="13:00"
-                                       class="w-20 px-3 py-2 border border-gray-300 rounded-md text-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                       {{ session('pending_request') ? 'readonly' : '' }}
+                                       class="w-20 px-3 py-2 border border-gray-300 rounded-md text-center {{ session('pending_request') ? 'bg-gray-50' : 'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500' }}">
                             </div>
                         </div>
 
@@ -126,15 +143,17 @@
                             <div class="flex-1 ml-8 flex items-center space-x-4">
                                 <input type="text" 
                                        name="break2_start"
-                                       value="" 
+                                       value="{{ old('break2_start', '') }}" 
                                        placeholder="15:00"
-                                       class="w-20 px-3 py-2 border border-gray-300 rounded-md text-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                       {{ session('pending_request') ? 'readonly' : '' }}
+                                       class="w-20 px-3 py-2 border border-gray-300 rounded-md text-center {{ session('pending_request') ? 'bg-gray-50' : 'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500' }}">
                                 <span class="text-gray-500">～</span>
                                 <input type="text" 
                                        name="break2_end"
-                                       value="" 
+                                       value="{{ old('break2_end', '') }}" 
                                        placeholder="15:15"
-                                       class="w-20 px-3 py-2 border border-gray-300 rounded-md text-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                       {{ session('pending_request') ? 'readonly' : '' }}
+                                       class="w-20 px-3 py-2 border border-gray-300 rounded-md text-center {{ session('pending_request') ? 'bg-gray-50' : 'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500' }}">
                             </div>
                         </div>
 
@@ -145,13 +164,15 @@
                             </label>
                             <div class="flex-1 ml-8">
                                 <textarea name="notes"
-                                          class="w-full px-3 py-2 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                          {{ session('pending_request') ? 'readonly' : '' }}
+                                          class="w-full px-3 py-2 border border-gray-300 rounded-md resize-none {{ session('pending_request') ? 'bg-gray-50' : 'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500' }}"
                                           rows="3"
-                                          placeholder="備考を入力してください">{{ $attendance->notes ?? '電車遅延のため' }}</textarea>
+                                          placeholder="備考を入力してください">{{ old('notes', $attendance->notes ?? '電車遅延のため') }}</textarea>
                             </div>
                         </div>
                     </div>
 
+                    @if(!session('pending_request'))
                         <!-- エラーメッセージ -->
                         @if($errors->any())
                             <div class="mt-6 space-y-2">
@@ -168,7 +189,14 @@
                                 修正申請
                             </button>
                         </div>
-                    </form>
+                        </form>
+                    @else
+                        <!-- 承認待ち状態の警告メッセージ -->
+                        <div class="mt-8 text-center">
+                            <p class="text-red-600 text-sm">※承認待ちのため修正はできません。</p>
+                        </div>
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
