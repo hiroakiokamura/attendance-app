@@ -134,29 +134,10 @@
 
                 <!-- 退勤後の状態 -->
                 @if($attendance && $attendance->clock_out)
-                    <div class="p-4 bg-white rounded-lg shadow text-left">
-                        <h3 class="text-lg font-semibold mb-4 text-center">本日の勤怠（完了）</h3>
-                        <div class="space-y-2">
-                            <div class="flex justify-between">
-                                <span class="text-gray-600">出勤時刻:</span>
-                                <span class="font-medium">{{ $attendance->clock_in->format('H:i') }}</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-600">退勤時刻:</span>
-                                <span class="font-medium">{{ $attendance->clock_out->format('H:i') }}</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-600">休憩時間:</span>
-                                <span class="font-medium">{{ $attendance->formatted_break_time }}</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-600">勤務時間:</span>
-                                <span class="font-medium">{{ $attendance->formatted_work_time }}</span>
-                            </div>
-                        </div>
-                        <div class="text-center mt-4 text-green-600 font-medium">
-                            お疲れ様でした！
-                        </div>
+                    <div class="mb-8">
+                        <p class="text-lg text-gray-800 font-medium text-center">
+                            お疲れ様でした。
+                        </p>
                     </div>
                 @endif
             </div>
