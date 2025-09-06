@@ -95,20 +95,31 @@
 
                 <!-- 出勤後の状態（退勤・休憩ボタン表示） -->
                 @if($attendance && $attendance->clock_in && !$attendance->clock_out)
-                    <div class="mb-8">
-                        <!-- 退勤・休憩ボタン（横並び） -->
-                        <div class="flex justify-center space-x-6">
-                            <!-- 退勤ボタン -->
-                            <form method="POST" action="{{ route('attendance.clock-out') }}">
+                    <!-- 休憩中の状態：休憩戻ボタンのみ表示 -->
+                    @if($attendance->break_start && !$attendance->break_end)
+                        <div class="mb-8">
+                            <form method="POST" action="{{ route('attendance.break-end') }}">
                                 @csrf
                                 <button type="submit" 
-                                        class="bg-black text-white px-12 py-4 rounded-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition duration-200 font-medium text-lg">
-                                    退勤
+                                        class="bg-black text-white px-16 py-4 rounded-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition duration-200 font-medium text-lg">
+                                    休憩戻
                                 </button>
                             </form>
+                        </div>
+                    @else
+                        <!-- 出勤後（休憩前）の状態：退勤・休憩入ボタン横並び -->
+                        <div class="mb-8">
+                            <div class="flex justify-center space-x-6">
+                                <!-- 退勤ボタン -->
+                                <form method="POST" action="{{ route('attendance.clock-out') }}">
+                                    @csrf
+                                    <button type="submit" 
+                                            class="bg-black text-white px-12 py-4 rounded-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition duration-200 font-medium text-lg">
+                                        退勤
+                                    </button>
+                                </form>
 
-                            <!-- 休憩入/休憩戻ボタン -->
-                            @if(!$attendance->break_start || ($attendance->break_start && $attendance->break_end))
+                                <!-- 休憩入ボタン -->
                                 <form method="POST" action="{{ route('attendance.break-start') }}">
                                     @csrf
                                     <button type="submit" 
@@ -116,19 +127,9 @@
                                         休憩入
                                     </button>
                                 </form>
-                            @endif
-
-                            @if($attendance->break_start && !$attendance->break_end)
-                                <form method="POST" action="{{ route('attendance.break-end') }}">
-                                    @csrf
-                                    <button type="submit" 
-                                            class="bg-black text-white px-12 py-4 rounded-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition duration-200 font-medium text-lg">
-                                        休憩戻
-                                    </button>
-                                </form>
-                            @endif
+                            </div>
                         </div>
-                    </div>
+                    @endif
                 @endif
 
                 <!-- 退勤後の状態 -->
