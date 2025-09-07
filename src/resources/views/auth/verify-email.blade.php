@@ -42,9 +42,17 @@
 
             <!-- 認証ボタン -->
             <div class="text-center mb-8">
-                <button class="bg-gray-400 text-white px-8 py-3 rounded-md font-medium cursor-not-allowed" disabled>
+                @php
+                    $verificationUrl = \Illuminate\Support\Facades\URL::temporarySignedRoute(
+                        'verification.verify',
+                        now()->addMinutes(60),
+                        ['id' => auth()->user()->id, 'hash' => sha1(auth()->user()->email)]
+                    );
+                @endphp
+                <a href="{{ $verificationUrl }}" 
+                   class="inline-block bg-gray-500 hover:bg-gray-600 text-white px-8 py-3 rounded-md font-medium transition duration-200">
                     認証はこちらから
-                </button>
+                </a>
             </div>
 
             <!-- 認証メール再送リンク -->
