@@ -75,7 +75,7 @@ class FortifyServiceProvider extends ServiceProvider
             return new class implements \Laravel\Fortify\Contracts\RegisterResponse {
                 public function toResponse($request)
                 {
-                    return redirect('/attendance');
+                    return redirect()->route('verification.notice');
                 }
             };
         });

@@ -66,6 +66,17 @@ services:
     depends_on:
       - db
 
+  # Mailhog (メール開発用サーバー)
+  mailhog:
+    image: mailhog/mailhog
+    container_name: attendance_mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025" # SMTP サーバー
+      - "8025:8025" # Web UI
+    networks:
+      - attendance_network
+
 networks:
   attendance_network:
     driver: bridge
