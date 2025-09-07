@@ -57,6 +57,13 @@
                 </div>
             @endif
 
+            <!-- メール認証完了メッセージ -->
+            @if (request()->get('verified') == '1')
+                <div class="mb-4 p-4 bg-blue-100 border border-blue-400 text-blue-700 rounded max-w-md mx-auto">
+                    メール認証が完了しました。ご利用いただけます。
+                </div>
+            @endif
+
             <!-- メインコンテンツエリア -->
             <div class="max-w-md mx-auto text-center">
                 <!-- ユーザー挨拶 -->
