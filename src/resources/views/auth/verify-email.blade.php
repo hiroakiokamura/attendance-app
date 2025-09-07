@@ -50,7 +50,7 @@
                     );
                 @endphp
                 <a href="{{ $verificationUrl }}" 
-                   class="inline-block bg-gray-500 hover:bg-gray-600 text-white px-8 py-3 rounded-md font-medium transition duration-200">
+                   class="inline-block bg-gray-400 hover:bg-gray-500 text-white px-8 py-3 rounded-md font-medium transition duration-300 transform hover:scale-105 shadow-md hover:shadow-lg">
                     認証はこちらから
                 </a>
             </div>
