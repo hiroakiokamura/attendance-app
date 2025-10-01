@@ -52,9 +52,9 @@ class FortifyServiceProvider extends ServiceProvider
             return view('auth.reset-password', ['request' => $request]);
         });
 
-        Fortify::verifyEmailView(function () {
-            return view('auth.verify-email');
-        });
+        // Fortify::verifyEmailView(function () {
+        //     return view('auth.verify-email');
+        // }); // カスタムメール認証を使用するため無効化
 
         Fortify::confirmPasswordView(function () {
             return view('auth.confirm-password');
@@ -70,12 +70,12 @@ class FortifyServiceProvider extends ServiceProvider
             };
         });
 
-        // 登録後のリダイレクト先を設定
+        // 登録後のリダイレクト先を設定（カスタムメール認証画面へ）
         $this->app->singleton(\Laravel\Fortify\Contracts\RegisterResponse::class, function () {
             return new class implements \Laravel\Fortify\Contracts\RegisterResponse {
                 public function toResponse($request)
                 {
-                    return redirect()->route('verification.notice');
+                    return redirect()->route('email.verify.show');
                 }
             };
         });

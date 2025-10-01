@@ -49,6 +49,14 @@ class Attendance extends Model
     }
 
     /**
+     * この勤怠記録の休憩時間
+     */
+    public function breakTimes()
+    {
+        return $this->hasMany(BreakTime::class)->orderBy('order');
+    }
+
+    /**
      * 勤務時間を計算（分単位）
      */
     public function calculateWorkTime(): int
@@ -64,15 +72,19 @@ class Attendance extends Model
     }
 
     /**
-     * 休憩時間を計算（分単位）
+     * 休憩時間を計算（分単位） - BreakTimeレコードから計算
      */
     public function calculateBreakTime(): int
     {
-        if (!$this->break_start || !$this->break_end) {
-            return 0;
+        $totalBreakMinutes = 0;
+        
+        foreach ($this->breakTimes as $breakTime) {
+            if ($breakTime->start_time && $breakTime->end_time) {
+                $totalBreakMinutes += $breakTime->start_time->diffInMinutes($breakTime->end_time);
+            }
         }
-
-        return $this->break_start->diffInMinutes($this->break_end);
+        
+        return $totalBreakMinutes;
     }
 
     /**
@@ -80,10 +92,14 @@ class Attendance extends Model
      */
     public function getFormattedWorkTimeAttribute(): string
     {
-        $minutes = $this->calculateWorkTime();
+        if ($this->total_work_time === null) {
+            return '--:--';
+        }
+        
+        $minutes = $this->total_work_time;
         $hours = intval($minutes / 60);
         $mins = $minutes % 60;
-        return sprintf('%02d:%02d', $hours, $mins);
+        return sprintf('%d時間%d分', $hours, $mins);
     }
 
     /**
@@ -91,9 +107,13 @@ class Attendance extends Model
      */
     public function getFormattedBreakTimeAttribute(): string
     {
-        $minutes = $this->total_break_time ?? 0;
+        if ($this->total_break_time === null) {
+            return '--:--';
+        }
+        
+        $minutes = $this->total_break_time;
         $hours = intval($minutes / 60);
         $mins = $minutes % 60;
-        return sprintf('%02d:%02d', $hours, $mins);
+        return sprintf('%d時間%d分', $hours, $mins);
     }
 }

@@ -20,6 +20,7 @@ class AttendanceController extends Controller
         // 今日の勤怠記録を取得
         $attendance = Attendance::where('user_id', $user->id)
             ->where('work_date', $today)
+            ->with('breakTimes')
             ->first();
 
         return view('attendance.index', compact('attendance'));
@@ -98,19 +99,28 @@ class AttendanceController extends Controller
 
         $attendance = Attendance::where('user_id', $user->id)
             ->where('work_date', $today)
+            ->with('breakTimes')
             ->first();
 
         if (!$attendance || !$attendance->clock_in) {
             return back()->with('error', '出勤記録がありません。');
         }
 
-        if ($attendance->break_start && !$attendance->break_end) {
+        // 現在進行中の休憩があるかチェック
+        $activeBreak = $attendance->breakTimes()->whereNull('end_time')->first();
+        if ($activeBreak) {
             return back()->with('error', '既に休憩中です。');
         }
 
-        $attendance->update([
-            'break_start' => $now,
-            'break_end' => null,
+        // 新しい休憩時間を作成
+        $nextOrder = $attendance->breakTimes()->max('order');
+        $nextOrder = $nextOrder ? $nextOrder + 1 : 1;
+        
+        \App\Models\BreakTime::create([
+            'attendance_id' => $attendance->id,
+            'start_time' => $now,
+            'end_time' => null,
+            'order' => $nextOrder
         ]);
 
         return back()->with('success', '休憩を開始しました。');
@@ -127,23 +137,34 @@ class AttendanceController extends Controller
 
         $attendance = Attendance::where('user_id', $user->id)
             ->where('work_date', $today)
+            ->with('breakTimes')
             ->first();
 
-        if (!$attendance || !$attendance->break_start) {
+        if (!$attendance) {
+            return back()->with('error', '勤怠記録がありません。');
+        }
+
+        // 現在進行中の休憩を取得
+        $activeBreak = $attendance->breakTimes()->whereNull('end_time')->first();
+        if (!$activeBreak) {
             return back()->with('error', '休憩開始記録がありません。');
         }
 
-        if ($attendance->break_end) {
-            return back()->with('error', '既に休憩終了済みです。');
-        }
+        // 休憩終了時刻を設定
+        $activeBreak->update([
+            'end_time' => $now
+        ]);
 
-        // 休憩時間を計算
-        $breakTime = $attendance->calculateBreakTime();
-        $totalBreakTime = ($attendance->total_break_time ?? 0) + $breakTime;
+        // 総休憩時間を再計算
+        $totalBreakMinutes = $attendance->breakTimes()->get()->sum(function($breakTime) {
+            if ($breakTime->start_time && $breakTime->end_time) {
+                return $breakTime->start_time->diffInMinutes($breakTime->end_time);
+            }
+            return 0;
+        });
 
         $attendance->update([
-            'break_end' => $now,
-            'total_break_time' => $totalBreakTime,
+            'total_break_time' => $totalBreakMinutes
         ]);
 
         return back()->with('success', '休憩を終了しました。');
@@ -189,6 +210,7 @@ class AttendanceController extends Controller
         $user = Auth::user();
         
         $attendance = Attendance::where('user_id', $user->id)
+            ->with('breakTimes')
             ->findOrFail($id);
 
         // 申請一覧からの遷移で承認待ち状態を表示
@@ -217,6 +239,16 @@ class AttendanceController extends Controller
             
             if (!empty($inputData)) {
                 session()->flash('_old_input', $inputData);
+            }
+        }
+
+        // 申請ステータスに基づく状態設定
+        if ($request->has('request_status')) {
+            $requestStatus = $request->get('request_status');
+            if ($requestStatus === 'approved') {
+                session()->flash('approved_request', true);
+            } elseif ($requestStatus === 'pending') {
+                session()->flash('pending_request', true);
             }
         }
 

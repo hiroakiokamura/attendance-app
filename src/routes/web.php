@@ -4,6 +4,7 @@ use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\StampCorrectionRequestController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Auth\CustomEmailVerificationController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -14,8 +15,15 @@ Route::get('/', function () {
 
 // Fortifyが自動的に認証ルートを処理します
 
-// 認証済み一般ユーザー用ルート
+// カスタムメール認証ルート
 Route::middleware(['auth'])->group(function () {
+    Route::get('/email/verify-custom', [CustomEmailVerificationController::class, 'show'])->name('email.verify.show');
+    Route::post('/email/verify-custom/resend', [CustomEmailVerificationController::class, 'resend'])->name('email.verify.resend');
+});
+Route::get('/email/verify-custom/{email}/{token}', [CustomEmailVerificationController::class, 'verify'])->name('email.verify.custom');
+
+// 認証済み一般ユーザー用ルート（メール認証必須）
+Route::middleware(['auth', 'verified'])->group(function () {
     // ダッシュボード（勤怠登録画面へリダイレクト）
     Route::get('/dashboard', function () {
         return redirect()->route('attendance.index');
@@ -60,7 +68,7 @@ Route::prefix('admin')->group(function () {
         Route::post('/login', [AdminController::class, 'login'])->name('admin.login.submit');
     });
     
-    Route::middleware(['auth', 'admin'])->group(function () {
+    Route::middleware(['auth', 'verified', 'admin'])->group(function () {
         // PG08: 勤怠一覧画面（管理者）
         Route::get('/attendance/list', [AdminController::class, 'attendanceList'])->name('admin.attendance.list');
         

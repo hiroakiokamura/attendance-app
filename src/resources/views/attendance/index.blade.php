@@ -102,9 +102,22 @@
 
                 <!-- 出勤後の状態（退勤・休憩ボタン表示） -->
                 @if($attendance && $attendance->clock_in && !$attendance->clock_out)
+                    @php
+                        // 現在進行中の休憩があるかチェック
+                        $activeBreak = $attendance->breakTimes->where('end_time', null)->first();
+                    @endphp
+                    
                     <!-- 休憩中の状態：休憩戻ボタンのみ表示 -->
-                    @if($attendance->break_start && !$attendance->break_end)
+                    @if($activeBreak)
                         <div class="mb-8">
+                            <div class="text-center mb-4">
+                                <p class="text-lg text-gray-700 font-medium">
+                                    休憩中（{{ $activeBreak->order }}回目）
+                                </p>
+                                <p class="text-sm text-gray-600">
+                                    開始時刻: {{ $activeBreak->start_time->format('H:i') }}
+                                </p>
+                            </div>
                             <form method="POST" action="{{ route('attendance.break-end') }}">
                                 @csrf
                                 <button type="submit" 
@@ -116,6 +129,13 @@
                     @else
                         <!-- 出勤後（休憩前）の状態：退勤・休憩入ボタン横並び -->
                         <div class="mb-8">
+                            @if($attendance->breakTimes->count() > 0)
+                                <div class="text-center mb-4">
+                                    <p class="text-sm text-gray-600">
+                                        休憩履歴: {{ $attendance->breakTimes->count() }}回
+                                    </p>
+                                </div>
+                            @endif
                             <div class="flex justify-center space-x-6">
                                 <!-- 退勤ボタン -->
                                 <form method="POST" action="{{ route('attendance.clock-out') }}">

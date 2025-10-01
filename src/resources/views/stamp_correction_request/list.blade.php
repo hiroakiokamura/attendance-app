@@ -59,12 +59,14 @@
             <!-- タブナビゲーション -->
             <div class="mb-6 max-w-4xl mx-auto">
                 <div class="flex border-b border-gray-300">
-                    <button class="px-6 py-3 text-gray-800 border-b-2 border-gray-800 font-medium">
+                    <a href="{{ route('stamp_correction_request.list', ['status' => 'pending']) }}" 
+                       class="px-6 py-3 {{ ($status ?? 'pending') === 'pending' ? 'text-gray-800 border-b-2 border-gray-800 font-medium' : 'text-gray-600 hover:text-gray-800 transition-colors' }}">
                         承認待ち
-                    </button>
-                    <button class="px-6 py-3 text-gray-600 hover:text-gray-800 transition-colors">
+                    </a>
+                    <a href="{{ route('stamp_correction_request.list', ['status' => 'approved']) }}" 
+                       class="px-6 py-3 {{ ($status ?? 'pending') === 'approved' ? 'text-gray-800 border-b-2 border-gray-800 font-medium' : 'text-gray-600 hover:text-gray-800 transition-colors' }}">
                         承認済み
-                    </button>
+                    </a>
                 </div>
             </div>
 
@@ -119,7 +121,7 @@
                                         {{ $request->created_at->format('Y/m/d') }}
                                     </td>
                                     <td class="px-6 py-4 text-center text-sm text-gray-900">
-                                        <a href="{{ route('attendance.detail', ['id' => $request->attendance_id, 'pending' => true]) }}" class="text-blue-600 hover:text-blue-800 underline">
+                                        <a href="{{ route('attendance.detail', ['id' => $request->attendance_id, 'request_status' => $request->status]) }}" class="text-blue-600 hover:text-blue-800 underline">
                                             詳細
                                         </a>
                                     </td>
@@ -127,7 +129,13 @@
                             @empty
                                 <tr>
                                     <td colspan="6" class="px-6 py-8 text-center text-sm text-gray-500">
-                                        修正申請がありません
+                                        @if(($status ?? 'pending') === 'pending')
+                                            承認待ちの申請がありません
+                                        @elseif(($status ?? 'pending') === 'approved')
+                                            承認済みの申請がありません
+                                        @else
+                                            修正申請がありません
+                                        @endif
                                     </td>
                                 </tr>
                             @endforelse
@@ -139,7 +147,7 @@
             <!-- ページネーション -->
             @if($requests->hasPages())
                 <div class="mt-8 flex justify-center">
-                    {{ $requests->links() }}
+                    {{ $requests->appends(request()->query())->links() }}
                 </div>
             @endif
         </div>
