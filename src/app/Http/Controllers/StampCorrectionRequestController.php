@@ -46,47 +46,13 @@ class StampCorrectionRequestController extends Controller
     }
 
     /**
-     * 修正申請保存
+     * 修正申請保存（個別申請は非推奨、storeFromDetailを使用）
      */
     public function store(Request $request)
     {
-        $request->validate([
-            'attendance_id' => 'required|exists:attendances,id',
-            'request_type' => 'required|in:clock_in,clock_out,break_start,break_end',
-            'requested_time' => 'required|date_format:H:i',
-            'reason' => 'required|string|max:1000',
-        ]);
-
-        $attendance = Attendance::findOrFail($request->attendance_id);
-        
-        // 自分の勤怠記録かチェック
-        if ($attendance->user_id !== Auth::id()) {
-            abort(403);
-        }
-
-        // 元の時刻を取得
-        $originalTime = match($request->request_type) {
-            'clock_in' => $attendance->clock_in,
-            'clock_out' => $attendance->clock_out,
-            'break_start' => $attendance->break_start,
-            'break_end' => $attendance->break_end,
-        };
-
-        // 申請時刻を作成
-        $requestedDateTime = Carbon::parse($attendance->work_date->format('Y-m-d') . ' ' . $request->requested_time);
-
-        StampCorrectionRequest::create([
-            'user_id' => Auth::id(),
-            'attendance_id' => $attendance->id,
-            'request_type' => $request->request_type,
-            'original_time' => $originalTime,
-            'requested_time' => $requestedDateTime,
-            'reason' => $request->reason,
-            'status' => 'pending',
-        ]);
-
-        return redirect()->route('stamp_correction_request.list')
-            ->with('success', '修正申請を送信しました。');
+        // 個別申請は非推奨のため、詳細画面からの申請にリダイレクト
+        return redirect()->route('attendance.detail', $request->attendance_id)
+            ->with('error', '個別申請は非推奨です。勤怠詳細画面から複数項目を一括で申請してください。');
     }
 
     /**
@@ -196,42 +162,40 @@ class StampCorrectionRequestController extends Controller
 
         // 休憩時間の変更をチェック
         $breakTimes = $request->break_times ?? [];
-        $hasBreakChanges = !empty(array_filter($breakTimes, function($breakTime) {
-            return !empty($breakTime['start_time']) || !empty($breakTime['end_time']);
-        }));
         
-        // 休憩時間の処理
-        if ($hasBreakChanges) {
-            // 既存の休憩時間をクリア
-            $attendance->breakTimes()->delete();
-            
-            // 新しい休憩時間を保存
-            foreach ($breakTimes as $index => $breakTime) {
-                if (!empty($breakTime['start_time']) && !empty($breakTime['end_time'])) {
-                    $startDateTime = Carbon::parse($attendance->work_date->format('Y-m-d') . ' ' . $breakTime['start_time']);
-                    $endDateTime = Carbon::parse($attendance->work_date->format('Y-m-d') . ' ' . $breakTime['end_time']);
+        // 既存の休憩時間を取得
+        $existingBreakTimes = $attendance->breakTimes()->orderBy('order')->get();
+        
+        // 新しい休憩時間をフィルタリング（空でないもののみ）
+        $newBreakTimes = array_filter($breakTimes, function($breakTime) {
+            return !empty($breakTime['start_time']) && !empty($breakTime['end_time']);
+        });
+        
+        // 休憩時間の変更を検出
+        $hasBreakChanges = false;
+        
+        // 回数の変更をチェック
+        if (count($existingBreakTimes) !== count($newBreakTimes)) {
+            $hasBreakChanges = true;
+        } else {
+            // 既存の休憩時間と新しい休憩時間を比較
+            foreach ($newBreakTimes as $index => $newBreakTime) {
+                if (isset($existingBreakTimes[$index])) {
+                    $existing = $existingBreakTimes[$index];
+                    $existingStart = $existing->start_time ? $existing->start_time->format('H:i') : null;
+                    $existingEnd = $existing->end_time ? $existing->end_time->format('H:i') : null;
                     
-                    \App\Models\BreakTime::create([
-                        'attendance_id' => $attendance->id,
-                        'start_time' => $startDateTime,
-                        'end_time' => $endDateTime,
-                        'order' => $index + 1
-                    ]);
+                    if ($existingStart !== $newBreakTime['start_time'] || $existingEnd !== $newBreakTime['end_time']) {
+                        $hasBreakChanges = true;
+                        break;
+                    }
+                } else {
+                    $hasBreakChanges = true;
+                    break;
                 }
             }
-            
-            // 総休憩時間を再計算
-            $totalBreakMinutes = $attendance->breakTimes()->get()->sum(function($breakTime) {
-                if ($breakTime->start_time && $breakTime->end_time) {
-                    return $breakTime->start_time->diffInMinutes($breakTime->end_time);
-                }
-                return 0;
-            });
-            
-            $attendance->update([
-                'total_break_time' => $totalBreakMinutes
-            ]);
         }
+        
         
         \Log::info('修正申請処理の結果', [
             'user_id' => Auth::id(),
@@ -239,7 +203,16 @@ class StampCorrectionRequestController extends Controller
             'changes_count' => count($changes),
             'changes' => $changes,
             'has_break_changes' => $hasBreakChanges,
-            'break_times_count' => count($breakTimes)
+            'existing_break_times_count' => count($existingBreakTimes),
+            'new_break_times_count' => count($newBreakTimes),
+            'existing_break_times' => $existingBreakTimes->map(function($bt) {
+                return [
+                    'start_time' => $bt->start_time ? $bt->start_time->format('H:i') : null,
+                    'end_time' => $bt->end_time ? $bt->end_time->format('H:i') : null,
+                    'order' => $bt->order
+                ];
+            })->toArray(),
+            'new_break_times' => $newBreakTimes
         ]);
 
         if (empty($changes) && !$hasBreakChanges) {
@@ -250,41 +223,62 @@ class StampCorrectionRequestController extends Controller
             return back()->withErrors(['修正する項目がありません。']);
         }
 
-        // 各変更に対して修正申請を作成
+        // 複数の変更を1つの申請として処理
+        $allChanges = [];
+        
+        // 基本項目の変更を追加
         foreach ($changes as $change) {
             $requestedDateTime = Carbon::parse($attendance->work_date->format('Y-m-d') . ' ' . $change['requested']);
-
-            $correctionRequest = StampCorrectionRequest::create([
-                'user_id' => Auth::id(),
-                'attendance_id' => $attendance->id,
-                'request_type' => $change['field'],
-                'original_time' => $change['original'],
-                'requested_time' => $requestedDateTime,
-                'reason' => $reason,
-                'status' => 'pending',
-            ]);
-
-            \Log::info('修正申請を作成しました', [
-                'request_id' => $correctionRequest->id,
-                'user_id' => Auth::id(),
-                'attendance_id' => $attendance->id,
-                'request_type' => $change['field'],
-                'original_time' => $change['original'],
-                'requested_time' => $requestedDateTime,
-                'reason' => $reason
-            ]);
+            $allChanges[] = [
+                'field' => $change['field'],
+                'label' => $change['label'],
+                'original' => $change['original'] ? $change['original']->format('Y-m-d H:i:s') : null,
+                'requested' => $requestedDateTime->format('Y-m-d H:i:s')
+            ];
         }
+        
+        // 休憩時間の変更を追加
+        if ($hasBreakChanges) {
+            $allChanges[] = [
+                'field' => 'break_times',
+                'label' => '休憩時間',
+                'original' => json_encode($existingBreakTimes->map(function($bt) {
+                    return [
+                        'start_time' => $bt->start_time ? $bt->start_time->format('H:i') : null,
+                        'end_time' => $bt->end_time ? $bt->end_time->format('H:i') : null,
+                        'order' => $bt->order
+                    ];
+                })->toArray()),
+                'requested' => json_encode($newBreakTimes)
+            ];
+        }
+        
+        // 1つの修正申請を作成
+        $correctionRequest = StampCorrectionRequest::create([
+            'user_id' => Auth::id(),
+            'attendance_id' => $attendance->id,
+            'request_type' => 'multiple_changes',
+            'original_time' => json_encode($allChanges),
+            'requested_time' => json_encode($allChanges),
+            'reason' => $reason,
+            'status' => 'pending',
+        ]);
+
+        \Log::info('複数項目の修正申請を作成しました', [
+            'request_id' => $correctionRequest->id,
+            'user_id' => Auth::id(),
+            'attendance_id' => $attendance->id,
+            'changes_count' => count($allChanges),
+            'changes' => $allChanges,
+            'reason' => $reason
+        ]);
 
         // 成功メッセージを設定
-        $totalChanges = count($changes);
+        $totalChanges = count($allChanges);
         $successMessage = '';
         
-        if ($totalChanges > 0 && $hasBreakChanges) {
-            $successMessage = $totalChanges . '件の修正申請と休憩時間を更新しました。';
-        } elseif ($totalChanges > 0) {
-            $successMessage = $totalChanges . '件の修正申請を送信しました。';
-        } elseif ($hasBreakChanges) {
-            $successMessage = '休憩時間を更新しました。';
+        if ($totalChanges > 0) {
+            $successMessage = '修正申請を送信しました。';
         }
 
         return redirect()->route('attendance.detail', $attendance->id)
@@ -317,8 +311,20 @@ class StampCorrectionRequestController extends Controller
      */
     public function approve($id)
     {
+        \Log::info('承認画面を表示します', [
+            'request_id' => $id
+        ]);
+        
         $request = StampCorrectionRequest::with(['user', 'attendance.breakTimes'])
             ->findOrFail($id);
+
+        \Log::info('修正申請データを取得しました', [
+            'request_id' => $request->id,
+            'request_type' => $request->request_type,
+            'status' => $request->status,
+            'user_id' => $request->user_id,
+            'attendance_id' => $request->attendance_id
+        ]);
 
         // 申請内容を反映した勤怠データを作成
         $attendanceData = $this->getAttendanceWithAppliedChanges($request);
@@ -333,7 +339,6 @@ class StampCorrectionRequestController extends Controller
     {
         $attendance = $correctionRequest->attendance;
         $field = $correctionRequest->request_type;
-        $requestedTime = $correctionRequest->requested_time;
 
         // 現在の勤怠データをコピー
         $data = [
@@ -347,7 +352,39 @@ class StampCorrectionRequestController extends Controller
 
         // 申請内容を反映
         if (in_array($field, ['clock_in', 'clock_out', 'break_start', 'break_end'])) {
-            $data[$field] = $requestedTime;
+            $data[$field] = $correctionRequest->getRequestedTimeAsCarbon();
+        } elseif ($field === 'break_times') {
+            // 休憩時間一括変更の場合
+            $newBreakData = json_decode($correctionRequest->requested_time, true);
+            $data['breakTimes'] = collect($newBreakData)->map(function($breakTime, $index) use ($attendance) {
+                return (object) [
+                    'start_time' => $breakTime['start_time'] ? Carbon::parse($attendance->work_date->format('Y-m-d') . ' ' . $breakTime['start_time']) : null,
+                    'end_time' => $breakTime['end_time'] ? Carbon::parse($attendance->work_date->format('Y-m-d') . ' ' . $breakTime['end_time']) : null,
+                    'order' => $index + 1
+                ];
+            });
+        } elseif ($field === 'multiple_changes') {
+            // 複数項目変更の場合
+            $changes = json_decode($correctionRequest->requested_time, true);
+            
+            foreach ($changes as $change) {
+                $changeField = $change['field'];
+                
+                if (in_array($changeField, ['clock_in', 'clock_out', 'break_start', 'break_end'])) {
+                    // 基本項目の変更を反映
+                    $data[$changeField] = Carbon::parse($change['requested']);
+                } elseif ($changeField === 'break_times') {
+                    // 休憩時間の変更を反映
+                    $newBreakData = json_decode($change['requested'], true);
+                    $data['breakTimes'] = collect($newBreakData)->map(function($breakTime, $index) use ($attendance) {
+                        return (object) [
+                            'start_time' => $breakTime['start_time'] ? Carbon::parse($attendance->work_date->format('Y-m-d') . ' ' . $breakTime['start_time']) : null,
+                            'end_time' => $breakTime['end_time'] ? Carbon::parse($attendance->work_date->format('Y-m-d') . ' ' . $breakTime['end_time']) : null,
+                            'order' => $index + 1
+                        ];
+                    });
+                }
+            }
         }
 
         return (object) $data;
@@ -358,8 +395,21 @@ class StampCorrectionRequestController extends Controller
      */
     public function processApproval(Request $request, $id)
     {
+        \Log::info('承認処理が開始されました', [
+            'request_id' => $id,
+            'is_ajax' => $request->ajax(),
+            'wants_json' => $request->wantsJson(),
+            'method' => $request->method(),
+            'all_data' => $request->all(),
+            'headers' => $request->headers->all(),
+            'content_type' => $request->header('Content-Type'),
+            'accept' => $request->header('Accept'),
+            'user_agent' => $request->header('User-Agent')
+        ]);
+        
         // AJAX リクエストの場合
         if ($request->ajax() || $request->wantsJson()) {
+            \Log::info('AJAX承認処理を実行します', ['request_id' => $id]);
             return $this->processApprovalAjax($request, $id);
         }
 
@@ -393,15 +443,16 @@ class StampCorrectionRequestController extends Controller
                 'attendance_id' => $attendance->id,
                 'field' => $field,
                 'old_value' => $attendance->{$field},
-                'new_value' => $correctionRequest->requested_time
+                'new_value' => $field === 'break_times' ? $correctionRequest->requested_time : $correctionRequest->getRequestedTimeAsCarbon()
             ]);
             
             try {
                 // 出勤・退勤時刻の更新
                 if (in_array($field, ['clock_in', 'clock_out'])) {
                     $oldValue = $attendance->{$field};
+                    $requestedTime = $correctionRequest->getRequestedTimeAsCarbon();
                     $attendance->update([
-                        $field => $correctionRequest->requested_time,
+                        $field => $requestedTime,
                     ]);
                     
                     // 勤務時間を再計算
@@ -412,7 +463,7 @@ class StampCorrectionRequestController extends Controller
                     \Log::info('Form: Clock time updated', [
                         'field' => $field,
                         'old' => $oldValue ? $oldValue->format('H:i:s') : 'null',
-                        'new' => $correctionRequest->requested_time->format('H:i:s'),
+                        'new' => $requestedTime ? $requestedTime->format('H:i:s') : 'null',
                         'total_work_time' => $attendance->total_work_time
                     ]);
                 }
@@ -420,14 +471,15 @@ class StampCorrectionRequestController extends Controller
                 // 休憩時間の更新（新しいBreakTimeモデル対応）
                 elseif (in_array($field, ['break_start', 'break_end'])) {
                     $oldValue = $attendance->{$field};
+                    $requestedTime = $correctionRequest->getRequestedTimeAsCarbon();
                     
                     // 古いフィールドも更新（互換性のため）
                     $attendance->update([
-                        $field => $correctionRequest->requested_time,
+                        $field => $requestedTime,
                     ]);
                     
                     // BreakTimeモデルでも更新
-                    $this->updateBreakTimeFromRequest($attendance, $field, $correctionRequest->requested_time);
+                    $this->updateBreakTimeFromRequest($attendance, $field, $requestedTime);
                     
                     // 総休憩時間を再計算
                     $totalBreakMinutes = $attendance->breakTimes()->get()->sum(function($breakTime) {
@@ -444,8 +496,66 @@ class StampCorrectionRequestController extends Controller
                     \Log::info('Form: Break time updated', [
                         'field' => $field,
                         'old' => $oldValue ? $oldValue->format('H:i:s') : 'null',
-                        'new' => $correctionRequest->requested_time->format('H:i:s'),
+                        'new' => $requestedTime ? $requestedTime->format('H:i:s') : 'null',
                         'total_break_time' => $totalBreakMinutes
+                    ]);
+                }
+                
+                // 休憩時間一括更新（break_times）
+                elseif ($field === 'break_times') {
+                    \Log::info('Form: 休憩時間一括更新を開始します', [
+                        'request_id' => $correctionRequest->id,
+                        'requested_time_raw' => $correctionRequest->requested_time,
+                        'requested_time_type' => gettype($correctionRequest->requested_time)
+                    ]);
+                    
+                    // 既存の休憩時間をクリア
+                    $attendance->breakTimes()->delete();
+                    
+                    // 新しい休憩時間データをデコード
+                    $newBreakData = json_decode($correctionRequest->requested_time, true);
+                    
+                    \Log::info('Form: 休憩時間データをデコードしました', [
+                        'decoded_data' => $newBreakData
+                    ]);
+                    
+                    // 新しい休憩時間を保存
+                    foreach ($newBreakData as $index => $breakTime) {
+                        if (!empty($breakTime['start_time']) && !empty($breakTime['end_time'])) {
+                            $startDateTime = Carbon::parse($attendance->work_date->format('Y-m-d') . ' ' . $breakTime['start_time']);
+                            $endDateTime = Carbon::parse($attendance->work_date->format('Y-m-d') . ' ' . $breakTime['end_time']);
+                            
+                            \App\Models\BreakTime::create([
+                                'attendance_id' => $attendance->id,
+                                'start_time' => $startDateTime,
+                                'end_time' => $endDateTime,
+                                'order' => $index + 1
+                            ]);
+                        }
+                    }
+                    
+                    // 総休憩時間を再計算
+                    $totalBreakMinutes = $attendance->breakTimes()->get()->sum(function($breakTime) {
+                        if ($breakTime->start_time && $breakTime->end_time) {
+                            return $breakTime->start_time->diffInMinutes($breakTime->end_time);
+                        }
+                        return 0;
+                    });
+                    
+                    $attendance->update([
+                        'total_break_time' => $totalBreakMinutes
+                    ]);
+                    
+                    // 勤務時間も再計算
+                    $attendance->update([
+                        'total_work_time' => $attendance->calculateWorkTime(),
+                    ]);
+                    
+                    \Log::info('Form: Break times updated', [
+                        'attendance_id' => $attendance->id,
+                        'new_break_data' => $newBreakData,
+                        'total_break_time' => $totalBreakMinutes,
+                        'total_work_time' => $attendance->total_work_time
                     ]);
                 }
                 
@@ -500,7 +610,10 @@ class StampCorrectionRequestController extends Controller
             \Log::info('AJAX approval request received', [
                 'request_id' => $id,
                 'request_data' => $request->all(),
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
+                'headers' => $request->headers->all(),
+                'content_type' => $request->header('Content-Type'),
+                'accept' => $request->header('Accept')
             ]);
 
             $validatedData = $request->validate([
@@ -539,20 +652,21 @@ class StampCorrectionRequestController extends Controller
                 $attendance = $correctionRequest->attendance;
                 $field = $correctionRequest->request_type;
                 
-                \Log::info('Starting attendance update after approval', [
-                    'request_id' => $correctionRequest->id,
-                    'attendance_id' => $attendance->id,
-                    'field' => $field,
-                    'old_value' => $attendance->{$field},
-                    'new_value' => $correctionRequest->requested_time
-                ]);
+            \Log::info('Starting attendance update after approval', [
+                'request_id' => $correctionRequest->id,
+                'attendance_id' => $attendance->id,
+                'field' => $field,
+                'old_value' => $attendance->{$field},
+                'new_value' => $field === 'break_times' ? $correctionRequest->requested_time : $correctionRequest->getRequestedTimeAsCarbon()
+            ]);
                 
                 try {
                     // 出勤・退勤時刻の更新
                     if (in_array($field, ['clock_in', 'clock_out'])) {
                         $oldValue = $attendance->{$field};
+                        $requestedTime = $correctionRequest->getRequestedTimeAsCarbon();
                         $attendance->update([
-                            $field => $correctionRequest->requested_time,
+                            $field => $requestedTime,
                         ]);
                         
                         // 勤務時間を再計算
@@ -563,7 +677,7 @@ class StampCorrectionRequestController extends Controller
                         \Log::info('Clock time updated', [
                             'field' => $field,
                             'old' => $oldValue ? $oldValue->format('H:i:s') : 'null',
-                            'new' => $correctionRequest->requested_time->format('H:i:s'),
+                            'new' => $requestedTime ? $requestedTime->format('H:i:s') : 'null',
                             'total_work_time' => $attendance->total_work_time
                         ]);
                     }
@@ -571,14 +685,15 @@ class StampCorrectionRequestController extends Controller
                     // 休憩時間の更新（新しいBreakTimeモデル対応）
                     elseif (in_array($field, ['break_start', 'break_end'])) {
                         $oldValue = $attendance->{$field};
+                        $requestedTime = $correctionRequest->getRequestedTimeAsCarbon();
                         
                         // 古いフィールドも更新（互換性のため）
                         $attendance->update([
-                            $field => $correctionRequest->requested_time,
+                            $field => $requestedTime,
                         ]);
                         
                         // BreakTimeモデルでも更新
-                        $this->updateBreakTimeFromRequest($attendance, $field, $correctionRequest->requested_time);
+                        $this->updateBreakTimeFromRequest($attendance, $field, $requestedTime);
                         
                         // 総休憩時間を再計算
                         $totalBreakMinutes = $attendance->breakTimes()->get()->sum(function($breakTime) {
@@ -595,8 +710,146 @@ class StampCorrectionRequestController extends Controller
                         \Log::info('Break time updated', [
                             'field' => $field,
                             'old' => $oldValue ? $oldValue->format('H:i:s') : 'null',
-                            'new' => $correctionRequest->requested_time->format('H:i:s'),
+                            'new' => $requestedTime ? $requestedTime->format('H:i:s') : 'null',
                             'total_break_time' => $totalBreakMinutes
+                        ]);
+                    }
+                    
+                    // 複数項目の更新（multiple_changes）
+                    elseif ($field === 'multiple_changes') {
+                        \Log::info('複数項目の更新を開始します', [
+                            'request_id' => $correctionRequest->id,
+                            'requested_time_raw' => $correctionRequest->requested_time
+                        ]);
+                        
+                        // 変更データをデコード
+                        $changes = json_decode($correctionRequest->requested_time, true);
+                        
+                        \Log::info('変更データをデコードしました', [
+                            'changes_count' => count($changes),
+                            'changes' => $changes
+                        ]);
+                        
+                        // 各変更項目を処理
+                        foreach ($changes as $change) {
+                            $changeField = $change['field'];
+                            
+                            if (in_array($changeField, ['clock_in', 'clock_out', 'break_start', 'break_end'])) {
+                                // 基本項目の更新
+                                $requestedTime = Carbon::parse($change['requested']);
+                                $attendance->update([$changeField => $requestedTime]);
+                                
+                                \Log::info('基本項目を更新しました', [
+                                    'field' => $changeField,
+                                    'new_value' => $requestedTime->format('Y-m-d H:i:s')
+                                ]);
+                            } elseif ($changeField === 'break_times') {
+                                // 休憩時間の一括更新
+                                $newBreakData = json_decode($change['requested'], true);
+                                
+                                // 既存の休憩時間をクリア
+                                $attendance->breakTimes()->delete();
+                                
+                                // 新しい休憩時間を保存
+                                foreach ($newBreakData as $index => $breakTime) {
+                                    if (!empty($breakTime['start_time']) && !empty($breakTime['end_time'])) {
+                                        $startDateTime = Carbon::parse($attendance->work_date->format('Y-m-d') . ' ' . $breakTime['start_time']);
+                                        $endDateTime = Carbon::parse($attendance->work_date->format('Y-m-d') . ' ' . $breakTime['end_time']);
+                                        
+                                        \App\Models\BreakTime::create([
+                                            'attendance_id' => $attendance->id,
+                                            'start_time' => $startDateTime,
+                                            'end_time' => $endDateTime,
+                                            'order' => $index + 1
+                                        ]);
+                                    }
+                                }
+                                
+                                \Log::info('休憩時間を一括更新しました', [
+                                    'new_break_data' => $newBreakData
+                                ]);
+                            }
+                        }
+                        
+                        // 総休憩時間を再計算
+                        $totalBreakMinutes = $attendance->breakTimes()->get()->sum(function($breakTime) {
+                            if ($breakTime->start_time && $breakTime->end_time) {
+                                return $breakTime->start_time->diffInMinutes($breakTime->end_time);
+                            }
+                            return 0;
+                        });
+                        
+                        $attendance->update([
+                            'total_break_time' => $totalBreakMinutes
+                        ]);
+                        
+                        // 勤務時間も再計算
+                        $attendance->update([
+                            'total_work_time' => $attendance->calculateWorkTime(),
+                        ]);
+                        
+                        \Log::info('複数項目の更新が完了しました', [
+                            'attendance_id' => $attendance->id,
+                            'total_break_time' => $totalBreakMinutes,
+                            'total_work_time' => $attendance->total_work_time
+                        ]);
+                    }
+                    
+                    // 休憩時間一括更新（break_times）
+                    elseif ($field === 'break_times') {
+                        \Log::info('休憩時間一括更新を開始します', [
+                            'request_id' => $correctionRequest->id,
+                            'requested_time_raw' => $correctionRequest->requested_time,
+                            'requested_time_type' => gettype($correctionRequest->requested_time)
+                        ]);
+                        
+                        // 既存の休憩時間をクリア
+                        $attendance->breakTimes()->delete();
+                        
+                        // 新しい休憩時間データをデコード
+                        $newBreakData = json_decode($correctionRequest->requested_time, true);
+                        
+                        \Log::info('休憩時間データをデコードしました', [
+                            'decoded_data' => $newBreakData
+                        ]);
+                        
+                        // 新しい休憩時間を保存
+                        foreach ($newBreakData as $index => $breakTime) {
+                            if (!empty($breakTime['start_time']) && !empty($breakTime['end_time'])) {
+                                $startDateTime = Carbon::parse($attendance->work_date->format('Y-m-d') . ' ' . $breakTime['start_time']);
+                                $endDateTime = Carbon::parse($attendance->work_date->format('Y-m-d') . ' ' . $breakTime['end_time']);
+                                
+                                \App\Models\BreakTime::create([
+                                    'attendance_id' => $attendance->id,
+                                    'start_time' => $startDateTime,
+                                    'end_time' => $endDateTime,
+                                    'order' => $index + 1
+                                ]);
+                            }
+                        }
+                        
+                        // 総休憩時間を再計算
+                        $totalBreakMinutes = $attendance->breakTimes()->get()->sum(function($breakTime) {
+                            if ($breakTime->start_time && $breakTime->end_time) {
+                                return $breakTime->start_time->diffInMinutes($breakTime->end_time);
+                            }
+                            return 0;
+                        });
+                        
+                        $attendance->update([
+                            'total_break_time' => $totalBreakMinutes
+                        ]);
+                        
+                        // 勤務時間も再計算
+                        $attendance->update([
+                            'total_work_time' => $attendance->calculateWorkTime(),
+                        ]);
+                        
+                        \Log::info('Break times updated', [
+                            'attendance_id' => $attendance->id,
+                            'new_break_data' => $newBreakData,
+                            'total_break_time' => $totalBreakMinutes,
+                            'total_work_time' => $attendance->total_work_time
                         ]);
                     }
                     
@@ -638,6 +891,12 @@ class StampCorrectionRequestController extends Controller
 
             $message = $status === 'approved' ? '申請を承認しました。' : '申請を却下しました。';
             
+            \Log::info('AJAX approval response', [
+                'request_id' => $id,
+                'status' => $status,
+                'message' => $message
+            ]);
+            
             return response()->json([
                 'success' => true,
                 'message' => $message,
@@ -672,12 +931,13 @@ class StampCorrectionRequestController extends Controller
                 $existingBreak->update(['start_time' => $requestedTime]);
             } else {
                 // 新しい休憩を作成
-                $nextOrder = $attendance->breakTimes()->max('order') + 1;
+                $maxOrder = $attendance->breakTimes()->max('order');
+                $nextOrder = $maxOrder ? $maxOrder + 1 : 1;
                 \App\Models\BreakTime::create([
                     'attendance_id' => $attendance->id,
                     'start_time' => $requestedTime,
                     'end_time' => null,
-                    'order' => $nextOrder ?: 1
+                    'order' => $nextOrder
                 ]);
             }
         } elseif ($field === 'break_end') {

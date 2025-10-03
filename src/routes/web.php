@@ -85,8 +85,8 @@ Route::prefix('admin')->group(function () {
         Route::get('/stamp_correction_request/list', [StampCorrectionRequestController::class, 'adminList'])->name('admin.stamp_correction_request.list');
         
         // PG13: 修正申請承認画面（管理者）
-        Route::get('/stamp_correction_request/approve/{attendance_correct_request}', [StampCorrectionRequestController::class, 'approve'])->name('admin.stamp_correction_request.approve');
-        Route::post('/stamp_correction_request/approve/{attendance_correct_request}', [StampCorrectionRequestController::class, 'processApproval'])->name('admin.stamp_correction_request.process');
+        Route::get('/stamp_correction_request/approve/{id}', [StampCorrectionRequestController::class, 'approve'])->name('admin.stamp_correction_request.approve');
+        Route::post('/stamp_correction_request/approve/{id}', [StampCorrectionRequestController::class, 'processApproval'])->name('admin.stamp_correction_request.process');
         
         // 勤怠編集（管理者）
         Route::get('/attendance/edit/{id}', [AdminController::class, 'editAttendance'])->name('admin.attendance.edit');

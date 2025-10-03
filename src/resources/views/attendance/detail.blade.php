@@ -124,7 +124,13 @@
                         <!-- 休憩時間 -->
                         <div id="break-times-container">
                             @php
-                                $breakTimes = $attendance->breakTimes ?? collect();
+                                // 申請内容がある場合はそちらを使用、なければ現在のデータベースの値を使用
+                                $oldBreakTimes = old('break_times');
+                                if ($oldBreakTimes && is_array($oldBreakTimes)) {
+                                    $breakTimes = collect($oldBreakTimes);
+                                } else {
+                                    $breakTimes = $attendance->breakTimes ?? collect();
+                                }
                                 // 既存の休憩時間がない場合は、最低1つの空の休憩時間を表示
                                 if ($breakTimes->isEmpty()) {
                                     $breakTimes = collect([null]);
@@ -139,14 +145,14 @@
                                     <div class="flex-1 ml-8 flex items-center space-x-4">
                                         <input type="text" 
                                                name="break_times[{{ $index }}][start_time]"
-                                               value="{{ old('break_times.'.$index.'.start_time', $breakTime ? $breakTime->start_time->format('H:i') : '') }}" 
+                                               value="{{ old('break_times.'.$index.'.start_time', is_array($breakTime) ? ($breakTime['start_time'] ?? '') : ($breakTime ? $breakTime->start_time->format('H:i') : '')) }}" 
                                                placeholder="12:00"
                                                {{ ($hasPendingRequests || session('pending_request') || $hasApprovedRequests) ? 'readonly' : '' }}
                                                class="w-20 px-3 py-2 border border-gray-300 rounded-md text-center {{ ($hasPendingRequests || session('pending_request') || $hasApprovedRequests) ? 'bg-gray-50' : 'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500' }}">
                                         <span class="text-gray-500">～</span>
                                         <input type="text" 
                                                name="break_times[{{ $index }}][end_time]"
-                                               value="{{ old('break_times.'.$index.'.end_time', $breakTime ? $breakTime->end_time->format('H:i') : '') }}" 
+                                               value="{{ old('break_times.'.$index.'.end_time', is_array($breakTime) ? ($breakTime['end_time'] ?? '') : ($breakTime ? $breakTime->end_time->format('H:i') : '')) }}" 
                                                placeholder="13:00"
                                                {{ ($hasPendingRequests || session('pending_request') || $hasApprovedRequests) ? 'readonly' : '' }}
                                                class="w-20 px-3 py-2 border border-gray-300 rounded-md text-center {{ ($hasPendingRequests || session('pending_request') || $hasApprovedRequests) ? 'bg-gray-50' : 'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500' }}">

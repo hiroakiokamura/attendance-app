@@ -170,25 +170,42 @@
 
     <script>
         function approveRequest(requestId) {
+            console.log('承認処理を開始します。Request ID:', requestId);
+            
             if (!confirm('この申請を承認しますか？勤怠記録が更新されます。')) {
+                console.log('承認がキャンセルされました');
                 return;
             }
 
             const btn = document.getElementById('approveBtn');
             const originalText = btn.textContent;
             
+            console.log('ボタンを無効化します');
             // ボタンを無効化
             btn.disabled = true;
             btn.textContent = '処理中...';
             btn.classList.remove('hover:bg-gray-800');
             btn.classList.add('opacity-50', 'cursor-not-allowed');
 
+            const url = `/admin/stamp_correction_request/approve/${requestId}`;
+            console.log('AJAX リクエストを送信します。URL:', url);
+
+            // CSRFトークンを取得
+            const csrfToken = document.querySelector('meta[name="csrf-token"]');
+            if (!csrfToken) {
+                console.error('CSRFトークンが見つかりません');
+                alert('CSRFトークンが見つかりません');
+                return;
+            }
+            
+            console.log('CSRFトークン:', csrfToken.getAttribute('content'));
+
             // AJAX リクエスト
-            fetch(`/admin/stamp_correction_request/approve/${requestId}`, {
+            fetch(url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'X-CSRF-TOKEN': csrfToken.getAttribute('content'),
                     'Accept': 'application/json'
                 },
                 body: JSON.stringify({
@@ -198,15 +215,24 @@
             .then(response => {
                 console.log('Response status:', response.status);
                 console.log('Response headers:', response.headers);
+                console.log('Response ok:', response.ok);
+                console.log('Response statusText:', response.statusText);
                 
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    console.error('HTTP error! status:', response.status);
+                    console.error('Response statusText:', response.statusText);
+                    // レスポンスのテキストを取得してログに出力
+                    return response.text().then(text => {
+                        console.error('Response body:', text);
+                        throw new Error(`HTTP error! status: ${response.status}, body: ${text}`);
+                    });
                 }
                 
                 return response.json();
             })
             .then(data => {
                 console.log('Response data:', data);
+                console.log('Success:', data.success);
                 
                 if (data.success) {
                     // 承認成功時
@@ -257,6 +283,7 @@
                     }
                 } else {
                     // エラー時
+                    console.error('承認処理が失敗しました:', data);
                     btn.disabled = false;
                     btn.textContent = originalText;
                     btn.classList.remove('opacity-50', 'cursor-not-allowed');
@@ -267,6 +294,8 @@
             .catch(error => {
                 // ネットワークエラー等
                 console.error('Fetch error details:', error);
+                console.error('Error message:', error.message);
+                console.error('Error stack:', error.stack);
                 btn.disabled = false;
                 btn.textContent = originalText;
                 btn.classList.remove('opacity-50', 'cursor-not-allowed');

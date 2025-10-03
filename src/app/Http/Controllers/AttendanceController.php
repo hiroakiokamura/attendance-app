@@ -214,7 +214,7 @@ class AttendanceController extends Controller
             ->findOrFail($id);
 
         // 申請一覧からの遷移で承認待ち状態を表示
-        if ($request->has('pending')) {
+        if ($request->has('pending') || $request->get('request_status') === 'pending') {
             session()->flash('pending_request', true);
             
             // 最新の承認待ち申請データを取得して入力フィールドに反映
@@ -232,6 +232,20 @@ class AttendanceController extends Controller
                     $inputData['break_start'] = $pendingRequest->requested_time->format('H:i');
                 } elseif ($pendingRequest->request_type === 'break_end') {
                     $inputData['break_end'] = $pendingRequest->requested_time->format('H:i');
+                } elseif ($pendingRequest->request_type === 'break_times') {
+                    // 休憩時間の変更を反映
+                    $breakData = json_decode($pendingRequest->requested_time, true);
+                    $inputData['break_times'] = $breakData;
+                } elseif ($pendingRequest->request_type === 'multiple_changes') {
+                    // 複数項目の変更を反映
+                    $changes = json_decode($pendingRequest->requested_time, true);
+                    foreach ($changes as $change) {
+                        if (in_array($change['field'], ['clock_in', 'clock_out', 'break_start', 'break_end'])) {
+                            $inputData[$change['field']] = \Carbon\Carbon::parse($change['requested'])->format('H:i');
+                        } elseif ($change['field'] === 'break_times') {
+                            $inputData['break_times'] = json_decode($change['requested'], true);
+                        }
+                    }
                 }
                 // 備考は最新の申請の理由を使用
                 $inputData['notes'] = $pendingRequest->reason;

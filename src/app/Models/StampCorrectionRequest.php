@@ -25,8 +25,8 @@ class StampCorrectionRequest extends Model
     protected function casts(): array
     {
         return [
-            'original_time' => 'datetime',
-            'requested_time' => 'datetime',
+            'original_time' => 'string', // 常に文字列として扱い、必要に応じてアクセサで変換
+            'requested_time' => 'string', // 常に文字列として扱い、必要に応じてアクセサで変換
             'approved_at' => 'datetime',
         ];
     }
@@ -78,6 +78,8 @@ class StampCorrectionRequest extends Model
             'clock_out' => '退勤時刻',
             'break_start' => '休憩開始時刻',
             'break_end' => '休憩終了時刻',
+            'break_times' => '休憩時間',
+            'multiple_changes' => '複数項目',
             default => '不明',
         };
     }
@@ -93,5 +95,29 @@ class StampCorrectionRequest extends Model
             'rejected' => 'status-rejected bg-red-100 text-red-800',
             default => 'bg-gray-100 text-gray-800',
         };
+    }
+
+    /**
+     * requested_timeをCarbonオブジェクトとして取得（break_timesとmultiple_changes以外の場合）
+     */
+    public function getRequestedTimeAsCarbon()
+    {
+        if (in_array($this->request_type, ['break_times', 'multiple_changes'])) {
+            return null; // break_timesとmultiple_changesの場合はCarbonオブジェクトとして取得しない
+        }
+        
+        return $this->requested_time ? \Carbon\Carbon::parse($this->requested_time) : null;
+    }
+
+    /**
+     * original_timeをCarbonオブジェクトとして取得（break_timesとmultiple_changes以外の場合）
+     */
+    public function getOriginalTimeAsCarbon()
+    {
+        if (in_array($this->request_type, ['break_times', 'multiple_changes'])) {
+            return null; // break_timesとmultiple_changesの場合はCarbonオブジェクトとして取得しない
+        }
+        
+        return $this->original_time ? \Carbon\Carbon::parse($this->original_time) : null;
     }
 }
